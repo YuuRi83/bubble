@@ -74,7 +74,6 @@ st.markdown("""
         background: #EEF2FF; border-color: #4F46E5; text-decoration: none !important;
     }
 
-    /* 관심 없음 버튼 영역 */
     .skip-zone {
         background: #FFFBEB; border: 1px dashed #F59E0B;
         border-radius: 12px; padding: 14px 16px; margin-top: 14px;
@@ -115,7 +114,6 @@ st.markdown("""
     .mini-metric .label { font-size:11px; color:#6B7280; font-weight:600; }
     .mini-metric .value { font-size:22px; color:#111827; font-weight:700; margin-top:2px; }
 
-    /* 비중 가로 막대 (HTML 기반) */
     .share-row {
         display:flex; align-items:center; gap:10px; margin-bottom:10px;
     }
@@ -134,7 +132,6 @@ st.markdown("""
         width:80px; font-size:12px; font-weight:600; color:#111827; text-align:right; flex-shrink:0;
     }
 
-    /* ============ 탈출 체험 ============ */
     .escape-hero {
         background: linear-gradient(135deg, #059669 0%, #10B981 100%);
         padding: 22px 26px; border-radius: 14px; color: white; margin-bottom: 18px;
@@ -174,7 +171,6 @@ st.markdown("""
     .escape-success .ttl { font-size:14px; color:#059669; font-weight:700; }
     .escape-success .msg { font-size:18px; color:#065F46; font-weight:700; margin-top:4px; }
 
-    /* ============ 댓글 ============ */
     .reflect-question {
         background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px;
         padding:14px 16px; margin-bottom:10px;
@@ -274,8 +270,12 @@ if "nickname" not in st.session_state:
     st.session_state.nickname = ""
 if "skip_count" not in st.session_state:
     st.session_state.skip_count = 0
-if "feed_seed" not in st.session_state:
-    st.session_state.feed_seed = 0  # 피드 강제 새로고침용
+# ★ 버그 수정 핵심: 피드를 세션에 저장해 재실행 시 동일하게 유지
+if "current_feed" not in st.session_state:
+    st.session_state.current_feed = None
+# ★ 탈출 모드의 missed 샘플도 안정화
+if "escape_samples" not in st.session_state:
+    st.session_state.escape_samples = {}
 
 # =========================================================
 # 구글 뉴스 RSS
@@ -357,7 +357,8 @@ def get_bubble_level():
     elif c <= 9: return 3
     return 4
 
-def get_feed():
+def build_feed():
+    """피드를 새로 생성. 결과를 세션에 저장하지는 않음 (호출자가 결정)."""
     bubble_level = get_bubble_level()
     is_extreme = bubble_level >= 3
     weighted = []
@@ -380,19 +381,30 @@ def get_feed():
     random.shuffle(feed)
     return feed
 
+def ensure_feed():
+    """세션에 피드가 없으면 새로 생성. 있으면 그대로 사용."""
+    if st.session_state.current_feed is None:
+        st.session_state.current_feed = build_feed()
+    return st.session_state.current_feed
+
+def refresh_feed():
+    """피드를 강제로 새로 생성."""
+    st.session_state.current_feed = build_feed()
+
 def click_content(item):
     cat = item["category"]
     st.session_state.click_history.append(cat)
     st.session_state.weights[cat] += 3
+    refresh_feed()              # ★ 클릭 처리 후 새 피드 생성
+    st.session_state.escape_samples = {}  # 탈출 카드도 갱신
 
 def skip_feed():
-    """관심 있는 기사가 없을 때 — 우세 카테고리의 가중치를 1 감소시키고 피드 새로고침"""
     st.session_state.skip_count += 1
     if st.session_state.click_history:
         dominant = max(st.session_state.weights, key=st.session_state.weights.get)
         if st.session_state.weights[dominant] > 1:
             st.session_state.weights[dominant] = max(1, st.session_state.weights[dominant] - 1)
-    st.session_state.feed_seed += 1  # 피드 변동성 강제
+    refresh_feed()              # ★ 건너뛰기 시에도 새 피드
 
 def analyze_personality():
     history = st.session_state.click_history
@@ -420,6 +432,15 @@ def get_missed_categories():
     avg = max(1, len(history) / len(categories))
     return [c for c in categories if counts[c] < avg]
 
+def get_escape_sample(cat):
+    """탈출 카드의 샘플 기사도 세션에 캐싱하여 재실행 시 안정 유지."""
+    if cat not in st.session_state.escape_samples:
+        pool = fetch_google_news(cat, is_extreme=False) or get_fallback_items(cat, False)
+        st.session_state.escape_samples[cat] = (
+            random.choice(pool) if pool else {"title": f"{cat} 분야 기사", "source": "예시", "link": "#"}
+        )
+    return st.session_state.escape_samples[cat]
+
 def start_escape():
     st.session_state.pre_escape_snapshot = {
         "weights": dict(st.session_state.weights),
@@ -429,6 +450,7 @@ def start_escape():
     }
     st.session_state.escape_mode = True
     st.session_state.escape_clicks = []
+    st.session_state.escape_samples = {}
 
 def escape_click(category):
     st.session_state.escape_clicks.append(category)
@@ -437,6 +459,8 @@ def escape_click(category):
     if dominant != category and st.session_state.weights[dominant] > 1:
         st.session_state.weights[dominant] = max(1, st.session_state.weights[dominant] - 2)
     st.session_state.click_history.append(category)
+    refresh_feed()
+    st.session_state.escape_samples = {}
 
 def reset_all():
     st.session_state.weights = {cat: 1 for cat in categories}
@@ -445,7 +469,8 @@ def reset_all():
     st.session_state.escape_clicks = []
     st.session_state.pre_escape_snapshot = None
     st.session_state.skip_count = 0
-    st.session_state.feed_seed = 0
+    st.session_state.current_feed = None
+    st.session_state.escape_samples = {}
     st.cache_data.clear()
 
 # ---------- 댓글 ----------
@@ -528,7 +553,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# 상단 메트릭
 total_clicks = len(st.session_state.click_history)
 bubble_level = get_bubble_level()
 dominant_cat = max(st.session_state.weights, key=st.session_state.weights.get) if total_clicks else "-"
@@ -552,8 +576,9 @@ with left_col:
     st.markdown('<div class="section-title">📰 맞춤형 실시간 추천 피드</div>', unsafe_allow_html=True)
     st.caption("💡 **기사 보기** 버튼은 알고리즘 학습용, **원문 읽기** 버튼은 실제 뉴스 페이지로 이동합니다.")
 
+    # ★ 세션에 저장된 피드를 사용 (재실행 시에도 동일)
     with st.spinner("구글 뉴스에서 최신 기사를 불러오는 중..."):
-        feed = get_feed()
+        feed = ensure_feed()
 
     feed_col1, feed_col2 = st.columns(2, gap="medium")
     for i, item in enumerate(feed):
@@ -566,8 +591,11 @@ with left_col:
                 st.markdown(f'<div class="news-title">{html.escape(item["title"])}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="news-source">📡 {html.escape(item["source"])}</div>', unsafe_allow_html=True)
 
+                # ★ 버튼 key를 안정적으로: 카테고리와 제목 해시 기반
+                # (피드가 동일하므로 i만 써도 되지만, 더욱 안전하게)
+                btn_key = f"btn_{i}_{cat}_{total_clicks}_{st.session_state.skip_count}"
                 if st.button("기사 보기 → (알고리즘 학습)",
-                             key=f"btn_{i}_{total_clicks}_{st.session_state.feed_seed}",
+                             key=btn_key,
                              use_container_width=True):
                     click_content(item)
                     st.rerun()
@@ -579,7 +607,6 @@ with left_col:
                     unsafe_allow_html=True
                 )
 
-    # ============ 관심 있는 기사가 없을 때 ============
     st.markdown(f"""
     <div class="skip-zone">
       <div class="ttl">😐 이 중에 관심 있는 기사가 없나요?</div>
@@ -629,15 +656,11 @@ with right_col:
     if total_clicks >= 5:
         st.warning(f"🚨 정보 환경이 **{dominant_cat}** 위주로 좁아지고 있습니다.")
 
-    # ============ 키워드 분석 그래프 (4개 탭) ============
     st.markdown("**📊 내가 학습시킨 키워드 분석**")
-
-    # 카테고리별 클릭 횟수
     click_counts = {cat: st.session_state.click_history.count(cat) for cat in categories}
 
     tab_w, tab_c, tab_p, tab_t = st.tabs(["추천 강도", "클릭 횟수", "비중", "추이"])
 
-    # --- 탭1: 추천 강도 (가중치) ---
     with tab_w:
         st.caption("AI가 각 카테고리에 부여한 추천 가중치입니다. 클릭할수록 해당 카테고리가 커집니다.")
         df_w = pd.DataFrame({
@@ -646,7 +669,6 @@ with right_col:
         })
         st.bar_chart(df_w.set_index("카테고리"), height=240, color="#4F46E5")
 
-    # --- 탭2: 클릭 횟수 ---
     with tab_c:
         st.caption("실제로 내가 클릭한 카테고리별 횟수입니다.")
         if total_clicks == 0:
@@ -657,8 +679,6 @@ with right_col:
                 "클릭 횟수": [click_counts[c] for c in categories]
             })
             st.bar_chart(df_c.set_index("카테고리"), height=240, color="#10B981")
-
-            # 최다/최소
             max_cat = max(click_counts, key=click_counts.get)
             min_cat = min(click_counts, key=click_counts.get)
             ic1, ic2 = st.columns(2)
@@ -667,29 +687,24 @@ with right_col:
             with ic2:
                 st.markdown(f'<div class="mini-metric"><div class="label">가장 안 본 카테고리</div><div class="value" style="font-size:15px;">{CAT_ICONS[min_cat]} {min_cat} ({click_counts[min_cat]}회)</div></div>', unsafe_allow_html=True)
 
-    # --- 탭3: 비중 (%) ---
     with tab_p:
         st.caption("전체 클릭 중 각 카테고리가 차지하는 비율입니다.")
         if total_clicks == 0:
             st.info("아직 클릭한 기사가 없습니다.")
         else:
-            # 큰 순서대로 정렬
             sorted_cats = sorted(categories, key=lambda c: click_counts[c], reverse=True)
             html_rows = ""
             for c in sorted_cats:
                 cnt = click_counts[c]
                 pct = (cnt / total_clicks * 100) if total_clicks > 0 else 0
-                bar_width = pct  # 0~100
                 html_rows += f"""
                 <div class="share-row">
                   <div class="share-label">{CAT_ICONS[c]} {c}</div>
-                  <div class="share-bar-wrap"><div class="share-bar" style="width:{bar_width:.1f}%;"></div></div>
+                  <div class="share-bar-wrap"><div class="share-bar" style="width:{pct:.1f}%;"></div></div>
                   <div class="share-value">{pct:.1f}% ({cnt}회)</div>
                 </div>
                 """
             st.markdown(html_rows, unsafe_allow_html=True)
-
-            # 다양성 평가
             top_pct = (click_counts[sorted_cats[0]] / total_clicks * 100) if total_clicks else 0
             if top_pct >= 60:
                 st.error(f"⚠️ 1위 카테고리가 전체의 {top_pct:.0f}%를 차지합니다. 편향이 심합니다.")
@@ -698,13 +713,11 @@ with right_col:
             else:
                 st.success(f"✅ 1위 카테고리가 {top_pct:.0f}%로 비교적 균형 잡혀 있습니다.")
 
-    # --- 탭4: 클릭 추이 ---
     with tab_t:
         st.caption("클릭이 누적되면서 각 카테고리의 점유율이 어떻게 변했는지 보여줍니다.")
         if total_clicks == 0:
             st.info("아직 클릭한 기사가 없습니다.")
         else:
-            # 클릭 시점별 누적 카운트
             rows = []
             cumulative = {c: 0 for c in categories}
             for step, cat in enumerate(st.session_state.click_history, start=1):
@@ -819,9 +832,10 @@ else:
             if st.button("🔁 다시 탈출 챌린지 도전", use_container_width=True):
                 st.session_state.escape_mode = False
                 st.session_state.escape_clicks = []
+                st.session_state.escape_samples = {}
                 st.rerun()
         with rc2:
-            if st.button("🌱 모든 기록 초기화 (댓글은 보존)", type="primary", use_container_width=True):
+            if st.button("🌱 모든 기록 초기화", type="primary", use_container_width=True):
                 reset_all()
                 st.rerun()
 
@@ -836,8 +850,7 @@ else:
         miss_cols = st.columns(min(3, len(missed)))
         for idx, cat in enumerate(missed[:3]):
             with miss_cols[idx]:
-                pool = fetch_google_news(cat, is_extreme=False) or get_fallback_items(cat, False)
-                sample = random.choice(pool) if pool else {"title": f"{cat} 분야 기사", "source": "예시", "link": "#"}
+                sample = get_escape_sample(cat)  # ★ 캐싱된 샘플 사용
 
                 st.markdown(f"""
                 <div class="missed-card">
@@ -871,6 +884,7 @@ else:
         if st.button("✖️ 챌린지 중단", use_container_width=False):
             st.session_state.escape_mode = False
             st.session_state.escape_clicks = []
+            st.session_state.escape_samples = {}
             st.rerun()
 
 # =========================================================
@@ -907,9 +921,6 @@ with e3:
 
 st.write("")
 
-# =========================================================
-# 핵심 키워드 + 리셋
-# =========================================================
 b1, b2 = st.columns([3, 1])
 with b1:
     st.markdown("#### 🎓 오늘의 수업 핵심 키워드")
