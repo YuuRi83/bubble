@@ -5,6 +5,7 @@ import feedparser
 import urllib.parse
 import re
 import html
+from datetime import datetime
 
 # =========================================================
 # 페이지 설정
@@ -132,6 +133,48 @@ st.markdown("""
     .escape-success .ttl { font-size:14px; color:#059669; font-weight:700; }
     .escape-success .msg { font-size:18px; color:#065F46; font-weight:700; margin-top:4px; }
 
+    /* ============ 댓글(생각 나누기) 스타일 ============ */
+    .reflect-question {
+        background:#F9FAFB; border:1px solid #E5E7EB; border-radius:10px;
+        padding:14px 16px; margin-bottom:10px;
+    }
+    .reflect-question .qnum {
+        display:inline-block; background:#4F46E5; color:white;
+        font-size:11px; font-weight:700; padding:2px 8px; border-radius:4px;
+        margin-right:8px; letter-spacing:0.3px;
+    }
+    .reflect-question .qcount {
+        float:right; background:#E0E7FF; color:#4338CA;
+        font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px;
+    }
+    .reflect-question .qtext {
+        font-size:14px; font-weight:600; color:#111827; line-height:1.5;
+    }
+
+    .comment-card {
+        background:white; border:1px solid #E5E7EB; border-radius:10px;
+        padding:12px 14px; margin-bottom:8px;
+    }
+    .comment-head {
+        display:flex; justify-content:space-between; align-items:center;
+        margin-bottom:6px;
+    }
+    .comment-author {
+        font-size:12px; font-weight:700; color:#4F46E5;
+    }
+    .comment-time {
+        font-size:11px; color:#9CA3AF;
+    }
+    .comment-body {
+        font-size:13px; color:#374151; line-height:1.6;
+        white-space:pre-wrap; word-break:break-word;
+    }
+    .no-comments {
+        text-align:center; padding:20px; color:#9CA3AF;
+        font-size:12px; background:#FAFAFC; border-radius:8px;
+        border:1px dashed #E5E7EB;
+    }
+
     .escape-card {
         background: white; border: 1px solid #E5E7EB; border-radius: 12px;
         padding: 18px; height: 100%;
@@ -170,6 +213,13 @@ CAT_DESC = {
 CAT_QUERIES = {c: c for c in categories}
 EXTREME_KEYWORDS = ["논란", "충격", "단독", "의혹", "분노"]
 
+# 성찰 질문 정의 (id 고정)
+REFLECT_QUESTIONS = [
+    {"id": "q1", "text": "평소에 잘 안 보던 카테고리의 기사를 읽으니 어떤 느낌이 들었나요?"},
+    {"id": "q2", "text": "알고리즘이 나에게 보여주지 않았던 정보 중에 중요한 내용이 있었나요?"},
+    {"id": "q3", "text": "일상에서 어떻게 하면 필터 버블에 갇히지 않을 수 있을까요?"}
+]
+
 # =========================================================
 # 세션 상태
 # =========================================================
@@ -180,9 +230,14 @@ if "click_history" not in st.session_state:
 if "escape_mode" not in st.session_state:
     st.session_state.escape_mode = False
 if "escape_clicks" not in st.session_state:
-    st.session_state.escape_clicks = []   # 탈출 모드에서 클릭한 카테고리들
+    st.session_state.escape_clicks = []
 if "pre_escape_snapshot" not in st.session_state:
-    st.session_state.pre_escape_snapshot = None  # Before/After 비교용
+    st.session_state.pre_escape_snapshot = None
+# 댓글 저장소: {질문ID: [ {author, body, time}, ... ]}
+if "comments" not in st.session_state:
+    st.session_state.comments = {q["id"]: [] for q in REFLECT_QUESTIONS}
+if "nickname" not in st.session_state:
+    st.session_state.nickname = ""
 
 # =========================================================
 # 구글 뉴스 RSS
@@ -301,17 +356,14 @@ def analyze_personality():
     name, icon = labels[dominant]
     return name, f"현재 **{dominant}** 카테고리를 집중 소비 중입니다.", icon
 
-# ---------- 탈출 체험 전용 함수 ----------
+# ---------- 탈출 체험 함수 ----------
 def get_missed_categories():
-    """클릭한 적 없거나 매우 적게 클릭한 카테고리 반환"""
     history = st.session_state.click_history
     counts = {cat: history.count(cat) for cat in categories}
-    # 클릭 0 또는 평균보다 적은 카테고리
     avg = max(1, len(history) / len(categories))
     return [c for c in categories if counts[c] < avg]
 
 def start_escape():
-    """탈출 체험 시작 — 현재 상태를 스냅샷"""
     st.session_state.pre_escape_snapshot = {
         "weights": dict(st.session_state.weights),
         "history": list(st.session_state.click_history),
@@ -322,9 +374,7 @@ def start_escape():
     st.session_state.escape_clicks = []
 
 def escape_click(category):
-    """탈출 모드에서 다양성 카테고리 클릭 — 우세 가중치는 낮추고, 해당 카테고리는 올림"""
     st.session_state.escape_clicks.append(category)
-    # 다양성 회복: 클릭한 카테고리 +2, 우세 카테고리 -2 (최소 1 유지)
     st.session_state.weights[category] += 2
     dominant = max(st.session_state.weights, key=st.session_state.weights.get)
     if dominant != category and st.session_state.weights[dominant] > 1:
@@ -337,7 +387,90 @@ def reset_all():
     st.session_state.escape_mode = False
     st.session_state.escape_clicks = []
     st.session_state.pre_escape_snapshot = None
+    # 댓글은 의도적으로 유지(수업 토론 자료 보존). 모두 지우고 싶다면 아래 라인 사용:
+    # st.session_state.comments = {q["id"]: [] for q in REFLECT_QUESTIONS}
     st.cache_data.clear()
+
+# ---------- 댓글 함수 ----------
+def add_comment(qid, author, body):
+    if not body.strip():
+        return False
+    author = author.strip() if author.strip() else "익명의 학생"
+    st.session_state.comments[qid].append({
+        "author": author,
+        "body": body.strip(),
+        "time": datetime.now().strftime("%H:%M")
+    })
+    return True
+
+def delete_comment(qid, index):
+    if 0 <= index < len(st.session_state.comments[qid]):
+        st.session_state.comments[qid].pop(index)
+
+def render_comment_section(qid, qnum, qtext):
+    """질문 1개에 대한 입력 + 댓글 목록 렌더링"""
+    count = len(st.session_state.comments[qid])
+    st.markdown(f"""
+    <div class="reflect-question">
+      <span class="qnum">Q{qnum}</span>
+      <span class="qcount">💬 {count}개의 생각</span>
+      <div class="qtext" style="margin-top:6px;">{html.escape(qtext)}</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 입력 폼
+    with st.form(key=f"form_{qid}", clear_on_submit=True):
+        c1, c2 = st.columns([1, 3])
+        with c1:
+            nick = st.text_input(
+                "닉네임",
+                value=st.session_state.nickname,
+                key=f"nick_{qid}",
+                placeholder="이름 또는 닉네임",
+                label_visibility="collapsed"
+            )
+        with c2:
+            body = st.text_input(
+                "내 생각",
+                key=f"body_{qid}",
+                placeholder="자유롭게 내 생각을 적어보세요...",
+                label_visibility="collapsed"
+            )
+        submitted = st.form_submit_button("💬 생각 남기기", use_container_width=False)
+        if submitted:
+            if add_comment(qid, nick, body):
+                if nick.strip():
+                    st.session_state.nickname = nick.strip()
+                st.rerun()
+            else:
+                st.warning("내용을 입력해 주세요.")
+
+    # 댓글 목록 (최신순)
+    comments = st.session_state.comments[qid]
+    if not comments:
+        st.markdown('<div class="no-comments">아직 작성된 생각이 없습니다. 첫 번째 의견을 남겨보세요!</div>',
+                    unsafe_allow_html=True)
+    else:
+        for idx in range(len(comments) - 1, -1, -1):
+            c = comments[idx]
+            cc1, cc2 = st.columns([10, 1])
+            with cc1:
+                st.markdown(f"""
+                <div class="comment-card">
+                  <div class="comment-head">
+                    <span class="comment-author">👤 {html.escape(c['author'])}</span>
+                    <span class="comment-time">🕒 {c['time']}</span>
+                  </div>
+                  <div class="comment-body">{html.escape(c['body'])}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with cc2:
+                st.write("")
+                if st.button("🗑️", key=f"del_{qid}_{idx}_{c['time']}", help="삭제"):
+                    delete_comment(qid, idx)
+                    st.rerun()
+
+    st.write("")
 
 # =========================================================
 # 헤더
@@ -429,7 +562,7 @@ with right_col:
     st.bar_chart(df.set_index("카테고리"), height=240, color="#4F46E5")
 
 # =========================================================
-# 하단: 필터 버블 탈출 체험 (핵심 신규 기능)
+# 하단: 필터 버블 탈출 체험
 # =========================================================
 st.divider()
 
@@ -441,7 +574,6 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-# --- 탈출 시작 전: 진입 안내 ---
 if not st.session_state.escape_mode:
     info_col, btn_col = st.columns([2, 1])
     with info_col:
@@ -458,14 +590,12 @@ if not st.session_state.escape_mode:
             start_escape()
             st.rerun()
 
-# --- 탈출 모드 진행 중 ---
 else:
     escape_diversity = len(set(st.session_state.escape_clicks))
     GOAL = 4
     progress_pct = min(100, int(escape_diversity / GOAL * 100))
     escaped = escape_diversity >= GOAL
 
-    # 진행도 바
     st.markdown(f"""
     <div class="escape-progress-wrap">
       <div class="escape-progress-label">
@@ -480,7 +610,6 @@ else:
     """, unsafe_allow_html=True)
 
     if escaped:
-        # 탈출 성공 화면
         snap = st.session_state.pre_escape_snapshot
         st.markdown("""
         <div class="escape-success">
@@ -489,7 +618,6 @@ else:
         </div>
         """, unsafe_allow_html=True)
 
-        # Before / After 비교
         st.markdown("##### 📊 Before vs After 비교")
         before_dom = snap["dominant"]
         after_dom = max(st.session_state.weights, key=st.session_state.weights.get)
@@ -514,7 +642,6 @@ else:
             </div>
             """, unsafe_allow_html=True)
 
-        # 가중치 비교 차트
         comp_df = pd.DataFrame({
             "카테고리": [f"{CAT_ICONS[c]} {c}" for c in categories],
             "Before": [snap["weights"][c] for c in categories],
@@ -522,16 +649,18 @@ else:
         }).set_index("카테고리")
         st.bar_chart(comp_df, height=260)
 
-        # 성찰 질문
+        # ============ 함께 생각해 봐요 (댓글 기능) ============
         st.markdown("##### 🧠 함께 생각해 봐요")
-        with st.container(border=True):
-            st.markdown("""
-            **Q1.** 평소에 잘 안 보던 카테고리의 기사를 읽으니 어떤 느낌이 들었나요?
+        st.caption("아래 질문에 자유롭게 본인의 생각을 남겨보세요. 친구들의 의견도 확인할 수 있어요.")
 
-            **Q2.** 알고리즘이 나에게 보여주지 않았던 정보 중에 **중요한 내용**이 있었나요?
+        total_comments = sum(len(v) for v in st.session_state.comments.values())
+        if total_comments > 0:
+            st.markdown(f"📊 지금까지 **{total_comments}개의 생각**이 모였어요!")
 
-            **Q3.** 일상에서 어떻게 하면 필터 버블에 갇히지 않을 수 있을까요?
-            """)
+        for idx, q in enumerate(REFLECT_QUESTIONS, start=1):
+            render_comment_section(q["id"], idx, q["text"])
+
+        st.divider()
 
         rc1, rc2 = st.columns(2)
         with rc1:
@@ -540,12 +669,11 @@ else:
                 st.session_state.escape_clicks = []
                 st.rerun()
         with rc2:
-            if st.button("🌱 모든 기록 초기화", type="primary", use_container_width=True):
+            if st.button("🌱 모든 기록 초기화 (댓글은 보존)", type="primary", use_container_width=True):
                 reset_all()
                 st.rerun()
 
     else:
-        # 진행 중 — 안 본 카테고리 카드 추천
         missed = get_missed_categories()
         if not missed:
             missed = [c for c in categories if c not in st.session_state.escape_clicks[-2:]]
@@ -553,7 +681,6 @@ else:
         st.markdown("##### 🔍 알고리즘이 가렸던 다른 시각들")
         st.caption("아래 카테고리는 여러분이 평소에 잘 보지 않은 분야입니다. 한 번 클릭해 새로운 관점을 만나보세요.")
 
-        # 안 본 카테고리에서 기사 1개씩 뽑아 카드로 표시
         miss_cols = st.columns(min(3, len(missed)))
         for idx, cat in enumerate(missed[:3]):
             with miss_cols[idx]:
@@ -576,14 +703,12 @@ else:
                     escape_click(cat)
                     st.rerun()
 
-        # 진행 중 격려 메시지
         if escape_diversity == 0:
             st.info("👆 위 카드 중 하나를 클릭해 첫 발걸음을 시작하세요!")
         elif escape_diversity < GOAL:
             remain = GOAL - escape_diversity
             st.success(f"💪 잘하고 있어요! {remain}가지 카테고리만 더 탐색하면 탈출 성공입니다.")
 
-        # 탈출 모드 중단
         if st.button("✖️ 챌린지 중단", use_container_width=False):
             st.session_state.escape_mode = False
             st.session_state.escape_clicks = []
@@ -632,6 +757,6 @@ with b1:
     st.success("✅ 필터 버블 (Filter Bubble) · ✅ 확증 편향 (Confirmation Bias) · ✅ 추천 알고리즘 윤리 · ✅ 디지털 리터러시")
 with b2:
     st.write("")
-    if st.button("🔄 모든 기록 초기화", type="primary", use_container_width=True):
+    if st.button("🔄 모든 기록 초기화", type="primary", use_container_width=True, key="final_reset"):
         reset_all()
         st.rerun()
