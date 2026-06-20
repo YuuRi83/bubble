@@ -17,7 +17,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# 커스텀 CSS — 가독성 강화
+# 커스텀 CSS
 # =========================================================
 st.markdown("""
 <style>
@@ -25,51 +25,27 @@ st.markdown("""
 
     .hero-banner {
         background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
-        padding: 28px 32px;
-        border-radius: 14px;
-        color: white;
-        margin-bottom: 20px;
+        padding: 28px 32px; border-radius: 14px; color: white; margin-bottom: 20px;
     }
-    .hero-banner h1 {
-        color: white !important;
-        margin: 0 0 8px 0;
-        font-size: 28px;
-        font-weight: 700;
-    }
-    .hero-banner p {
-        color: rgba(255,255,255,0.92);
-        margin: 0;
-        font-size: 15px;
-        line-height: 1.6;
-    }
+    .hero-banner h1 { color: white !important; margin: 0 0 8px 0; font-size: 28px; font-weight: 700; }
+    .hero-banner p  { color: rgba(255,255,255,0.92); margin: 0; font-size: 15px; line-height: 1.6; }
 
     .section-title {
-        font-size: 18px;
-        font-weight: 700;
-        color: #111827;
-        padding: 6px 0 12px 0;
-        border-bottom: 2px solid #E5E7EB;
-        margin-bottom: 14px;
+        font-size: 18px; font-weight: 700; color: #111827;
+        padding: 6px 0 12px 0; border-bottom: 2px solid #E5E7EB; margin-bottom: 14px;
     }
 
     div[data-testid="stVerticalBlockBorderWrapper"] {
-        background: white;
-        border-radius: 12px !important;
+        background: white; border-radius: 12px !important;
         transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
     div[data-testid="stVerticalBlockBorderWrapper"]:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+        transform: translateY(-2px); box-shadow: 0 4px 14px rgba(0,0,0,0.06);
     }
 
     .cat-badge {
-        display: inline-block;
-        padding: 3px 10px;
-        border-radius: 6px;
-        font-size: 11px;
-        font-weight: 600;
-        margin-bottom: 8px;
-        letter-spacing: 0.3px;
+        display: inline-block; padding: 3px 10px; border-radius: 6px;
+        font-size: 11px; font-weight: 600; margin-bottom: 8px; letter-spacing: 0.3px;
     }
     .cat-스포츠 { background:#DBEAFE; color:#1E40AF; }
     .cat-정치   { background:#FEE2E2; color:#991B1B; }
@@ -79,46 +55,22 @@ st.markdown("""
     .cat-교육   { background:#D1FAE5; color:#065F46; }
 
     .news-title {
-        font-size: 15px;
-        font-weight: 600;
-        color: #1F2937;
-        line-height: 1.45;
-        min-height: 44px;
-        margin-bottom: 6px;
+        font-size: 15px; font-weight: 600; color: #1F2937;
+        line-height: 1.45; min-height: 44px; margin-bottom: 6px;
     }
-    .news-source {
-        font-size: 11px;
-        color: #6B7280;
-        margin-bottom: 10px;
-    }
+    .news-source { font-size: 11px; color: #6B7280; margin-bottom: 10px; }
 
     .bubble-card {
-        padding: 16px 18px;
-        border-radius: 12px;
-        margin-bottom: 14px;
-        border-left: 5px solid;
+        padding: 16px 18px; border-radius: 12px;
+        margin-bottom: 14px; border-left: 5px solid;
     }
     .bubble-lv1 { background:#ECFDF5; border-color:#10B981; }
     .bubble-lv2 { background:#FFFBEB; border-color:#F59E0B; }
     .bubble-lv3 { background:#FFF7ED; border-color:#F97316; }
     .bubble-lv4 { background:#FEF2F2; border-color:#EF4444; }
-    .bubble-card .lv-label {
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.5px;
-        opacity: 0.7;
-    }
-    .bubble-card .lv-title {
-        font-size: 17px;
-        font-weight: 700;
-        margin: 2px 0 4px 0;
-        color: #111827;
-    }
-    .bubble-card .lv-desc {
-        font-size: 13px;
-        color: #4B5563;
-        line-height: 1.5;
-    }
+    .bubble-card .lv-label { font-size:12px; font-weight:700; letter-spacing:0.5px; opacity:0.7; }
+    .bubble-card .lv-title { font-size:17px; font-weight:700; margin:2px 0 4px 0; color:#111827; }
+    .bubble-card .lv-desc  { font-size:13px; color:#4B5563; line-height:1.5; }
 
     .stage-dots { display:flex; gap:6px; margin-top:10px; }
     .dot { flex:1; height:6px; border-radius:3px; background:#E5E7EB; }
@@ -128,56 +80,71 @@ st.markdown("""
     .dot.active-4 { background:#EF4444; }
 
     .personality-card {
-        background: white;
-        border: 1px solid #E5E7EB;
-        border-radius: 12px;
-        padding: 18px;
-        margin-bottom: 14px;
+        background: white; border: 1px solid #E5E7EB; border-radius: 12px;
+        padding: 18px; margin-bottom: 14px;
     }
-    .personality-type {
-        font-size: 22px;
-        font-weight: 700;
-        color: #4F46E5;
-        margin-bottom: 6px;
-    }
-    .personality-desc {
-        font-size: 13px;
-        color: #4B5563;
-        line-height: 1.6;
-    }
+    .personality-type { font-size:22px; font-weight:700; color:#4F46E5; margin-bottom:6px; }
+    .personality-desc { font-size:13px; color:#4B5563; line-height:1.6; }
 
     .mini-metric {
-        background: white;
-        border: 1px solid #E5E7EB;
-        border-radius: 10px;
-        padding: 12px 14px;
+        background: white; border: 1px solid #E5E7EB; border-radius: 10px; padding: 12px 14px;
     }
     .mini-metric .label { font-size:11px; color:#6B7280; font-weight:600; }
     .mini-metric .value { font-size:22px; color:#111827; font-weight:700; margin-top:2px; }
 
+    /* ============ 탈출 체험 전용 스타일 ============ */
+    .escape-hero {
+        background: linear-gradient(135deg, #059669 0%, #10B981 100%);
+        padding: 22px 26px; border-radius: 14px; color: white; margin-bottom: 18px;
+    }
+    .escape-hero h2 { color:white !important; margin:0 0 6px 0; font-size:22px; font-weight:700; }
+    .escape-hero p  { color:rgba(255,255,255,0.92); margin:0; font-size:14px; line-height:1.6; }
+
+    .escape-progress-wrap {
+        background:white; border:1px solid #E5E7EB; border-radius:12px;
+        padding:16px 18px; margin-bottom:16px;
+    }
+    .escape-progress-label {
+        display:flex; justify-content:space-between; align-items:center;
+        font-size:13px; font-weight:600; color:#374151; margin-bottom:8px;
+    }
+    .escape-progress-bar {
+        width:100%; height:12px; background:#E5E7EB; border-radius:6px; overflow:hidden;
+    }
+    .escape-progress-fill {
+        height:100%; background:linear-gradient(90deg, #10B981, #059669); border-radius:6px;
+        transition: width 0.4s ease;
+    }
+    .escape-progress-meta { font-size:11px; color:#6B7280; margin-top:6px; }
+
+    .missed-card {
+        background: white; border:1px solid #E5E7EB; border-left:4px solid #10B981;
+        border-radius:10px; padding:14px; margin-bottom:10px;
+    }
+    .missed-card .ttl { font-size:11px; color:#059669; font-weight:700; letter-spacing:0.5px; }
+    .missed-card .name { font-size:16px; font-weight:700; color:#111827; margin:2px 0 4px 0; }
+    .missed-card .desc { font-size:12px; color:#6B7280; }
+
+    .escape-success {
+        background:#ECFDF5; border:2px solid #10B981; border-radius:12px;
+        padding:18px; text-align:center; margin-bottom:14px;
+    }
+    .escape-success .ttl { font-size:14px; color:#059669; font-weight:700; }
+    .escape-success .msg { font-size:18px; color:#065F46; font-weight:700; margin-top:4px; }
+
     .escape-card {
-        background: white;
-        border: 1px solid #E5E7EB;
-        border-radius: 12px;
-        padding: 18px;
-        height: 100%;
+        background: white; border: 1px solid #E5E7EB; border-radius: 12px;
+        padding: 18px; height: 100%;
     }
     .escape-card .num {
-        display:inline-block;
-        width:28px; height:28px; border-radius:8px;
-        background:#4F46E5; color:white;
-        text-align:center; line-height:28px;
-        font-weight:700; font-size:14px;
-        margin-bottom: 10px;
+        display:inline-block; width:28px; height:28px; border-radius:8px;
+        background:#4F46E5; color:white; text-align:center; line-height:28px;
+        font-weight:700; font-size:14px; margin-bottom: 10px;
     }
     .escape-card h4 { margin:4px 0 6px 0; font-size:15px; color:#111827; }
-    .escape-card p { font-size:13px; color:#4B5563; line-height:1.6; margin:0; }
+    .escape-card p  { font-size:13px; color:#4B5563; line-height:1.6; margin:0; }
 
-    .stButton > button {
-        border-radius: 8px;
-        font-weight: 600;
-        font-size: 13px;
-    }
+    .stButton > button { border-radius: 8px; font-weight: 600; font-size: 13px; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -191,17 +158,16 @@ CAT_ICONS = {
     "연예": "🎤", "사건사고": "🚨", "교육": "📚"
 }
 
-# 구글 뉴스 검색에 최적화된 검색 키워드
-CAT_QUERIES = {
-    "스포츠": "스포츠",
-    "정치":   "정치",
-    "게임":   "게임",
-    "연예":   "연예",
-    "사건사고": "사건사고",
-    "교육":   "교육"
+CAT_DESC = {
+    "스포츠": "경기와 선수들의 활약, 건강한 경쟁의 세계",
+    "정치":   "사회를 움직이는 정책과 시민의 목소리",
+    "게임":   "디지털 문화와 e스포츠의 흐름",
+    "연예":   "대중문화·음악·드라마 트렌드",
+    "사건사고": "안전과 사회 이슈에 대한 경각심",
+    "교육":   "배움과 미래를 위한 지식"
 }
 
-# 버블 심화 시 추가될 자극적인 키워드
+CAT_QUERIES = {c: c for c in categories}
 EXTREME_KEYWORDS = ["논란", "충격", "단독", "의혹", "분노"]
 
 # =========================================================
@@ -211,45 +177,35 @@ if "weights" not in st.session_state:
     st.session_state.weights = {cat: 1 for cat in categories}
 if "click_history" not in st.session_state:
     st.session_state.click_history = []
+if "escape_mode" not in st.session_state:
+    st.session_state.escape_mode = False
+if "escape_clicks" not in st.session_state:
+    st.session_state.escape_clicks = []   # 탈출 모드에서 클릭한 카테고리들
+if "pre_escape_snapshot" not in st.session_state:
+    st.session_state.pre_escape_snapshot = None  # Before/After 비교용
 
 # =========================================================
-# 구글 뉴스 RSS 연동
+# 구글 뉴스 RSS
 # =========================================================
 @st.cache_data(ttl=1800, show_spinner=False)
 def fetch_google_news(category, is_extreme):
-    """
-    구글 뉴스 RSS에서 카테고리별 뉴스 제목을 가져옵니다.
-    - 무료, API 키 불필요
-    - is_extreme=True 이면 자극적인 키워드를 OR 조건으로 추가하여
-      버블이 심해질수록 자극적인 기사가 노출되도록 설계
-    """
     base_query = CAT_QUERIES.get(category, category)
-
     if is_extreme:
-        # 예: "정치 (논란 OR 충격 OR 단독 OR 의혹 OR 분노)"
         extreme_part = " OR ".join(EXTREME_KEYWORDS)
         query = f"{base_query} ({extreme_part})"
     else:
         query = base_query
 
-    # 한국어 한국 지역 결과
     encoded = urllib.parse.quote(query)
-    url = (
-        f"https://news.google.com/rss/search?"
-        f"q={encoded}&hl=ko&gl=KR&ceid=KR:ko"
-    )
+    url = f"https://news.google.com/rss/search?q={encoded}&hl=ko&gl=KR&ceid=KR:ko"
 
     try:
         feed = feedparser.parse(url)
         if not feed.entries:
             return None
-
         items = []
         for entry in feed.entries[:25]:
-            title = entry.get("title", "")
-            # HTML 엔티티 정리
-            title = html.unescape(title)
-            # 구글 뉴스는 "제목 - 언론사" 형식 → 분리
+            title = html.unescape(entry.get("title", ""))
             if " - " in title:
                 title_part, source = title.rsplit(" - ", 1)
             else:
@@ -262,7 +218,7 @@ def fetch_google_news(category, is_extreme):
         return None
 
 # =========================================================
-# 더미 데이터 (네트워크 실패 시 fallback)
+# 더미 데이터
 # =========================================================
 normal_titles = {
     "스포츠": ["손흥민, 경기 MVP 선정", "NBA 플레이오프 명승부", "프로야구 순위 경쟁 치열",
@@ -278,9 +234,8 @@ normal_titles = {
     "사건사고": ["경찰, 대규모 보이스피싱 일당 검거", "주말 고속도로 다중 추돌 사고",
                 "전국 집중 호우 대비 태세", "건조한 날씨 산불 주의보 발령"]
 }
-
 extreme_titles = {
-    "스포츠": ["충격! 대표팀 대참사", "역대급 오심 논란, 팬들 분노", "벤치클리어링 발발, 난장판 된 경기장"],
+    "스포츠": ["충격! 대표팀 대참사", "역대급 오심 논란, 팬들 분노", "벤치클리어링 발발"],
     "정치":   ["정치권 초비상 사태", "국민 여론 폭발, 대규모 시위 예고", "막말 논란에 정치권 발칵"],
     "게임":   ["역대급 게임 중독 논란 확산", "서버 터짐! 유저들 분노 폭발", "심각한 과금 유도 논란"],
     "연예":   ["연예계 발칵 뒤집힌 충격 소식", "팬들 멘붕, 단독 열애설 포착", "소속사 분쟁 심화"],
@@ -305,7 +260,6 @@ def get_bubble_level():
 def get_feed():
     bubble_level = get_bubble_level()
     is_extreme = bubble_level >= 3
-
     weighted = []
     for cat in categories:
         weighted.extend([cat] * st.session_state.weights[cat])
@@ -317,18 +271,9 @@ def get_feed():
         pool = fetch_google_news(cat, is_extreme)
         if not pool or len(pool) < count:
             pool = get_fallback_items(cat, is_extreme)
-
-        if count <= len(pool):
-            sampled = random.sample(pool, count)
-        else:
-            sampled = random.choices(pool, k=count)
-
+        sampled = random.sample(pool, count) if count <= len(pool) else random.choices(pool, k=count)
         for it in sampled:
-            feed.append({
-                "title": it["title"],
-                "source": it["source"],
-                "category": cat
-            })
+            feed.append({"title": it["title"], "source": it["source"], "category": cat})
     random.shuffle(feed)
     return feed
 
@@ -356,6 +301,44 @@ def analyze_personality():
     name, icon = labels[dominant]
     return name, f"현재 **{dominant}** 카테고리를 집중 소비 중입니다.", icon
 
+# ---------- 탈출 체험 전용 함수 ----------
+def get_missed_categories():
+    """클릭한 적 없거나 매우 적게 클릭한 카테고리 반환"""
+    history = st.session_state.click_history
+    counts = {cat: history.count(cat) for cat in categories}
+    # 클릭 0 또는 평균보다 적은 카테고리
+    avg = max(1, len(history) / len(categories))
+    return [c for c in categories if counts[c] < avg]
+
+def start_escape():
+    """탈출 체험 시작 — 현재 상태를 스냅샷"""
+    st.session_state.pre_escape_snapshot = {
+        "weights": dict(st.session_state.weights),
+        "history": list(st.session_state.click_history),
+        "dominant": max(st.session_state.weights, key=st.session_state.weights.get),
+        "diversity": len(set(st.session_state.click_history))
+    }
+    st.session_state.escape_mode = True
+    st.session_state.escape_clicks = []
+
+def escape_click(category):
+    """탈출 모드에서 다양성 카테고리 클릭 — 우세 가중치는 낮추고, 해당 카테고리는 올림"""
+    st.session_state.escape_clicks.append(category)
+    # 다양성 회복: 클릭한 카테고리 +2, 우세 카테고리 -2 (최소 1 유지)
+    st.session_state.weights[category] += 2
+    dominant = max(st.session_state.weights, key=st.session_state.weights.get)
+    if dominant != category and st.session_state.weights[dominant] > 1:
+        st.session_state.weights[dominant] = max(1, st.session_state.weights[dominant] - 2)
+    st.session_state.click_history.append(category)
+
+def reset_all():
+    st.session_state.weights = {cat: 1 for cat in categories}
+    st.session_state.click_history = []
+    st.session_state.escape_mode = False
+    st.session_state.escape_clicks = []
+    st.session_state.pre_escape_snapshot = None
+    st.cache_data.clear()
+
 # =========================================================
 # 헤더
 # =========================================================
@@ -374,51 +357,38 @@ dominant_cat = max(st.session_state.weights, key=st.session_state.weights.get) i
 diversity = len(set(st.session_state.click_history))
 
 m1, m2, m3, m4 = st.columns(4)
-with m1:
-    st.markdown(f'<div class="mini-metric"><div class="label">총 클릭 수</div><div class="value">{total_clicks}</div></div>', unsafe_allow_html=True)
-with m2:
-    st.markdown(f'<div class="mini-metric"><div class="label">버블 단계</div><div class="value">Lv. {bubble_level}</div></div>', unsafe_allow_html=True)
-with m3:
-    st.markdown(f'<div class="mini-metric"><div class="label">우세 카테고리</div><div class="value" style="font-size:18px;">{CAT_ICONS.get(dominant_cat,"")} {dominant_cat}</div></div>', unsafe_allow_html=True)
-with m4:
-    st.markdown(f'<div class="mini-metric"><div class="label">탐색 다양성</div><div class="value">{diversity} / 6</div></div>', unsafe_allow_html=True)
+with m1: st.markdown(f'<div class="mini-metric"><div class="label">총 클릭 수</div><div class="value">{total_clicks}</div></div>', unsafe_allow_html=True)
+with m2: st.markdown(f'<div class="mini-metric"><div class="label">버블 단계</div><div class="value">Lv. {bubble_level}</div></div>', unsafe_allow_html=True)
+with m3: st.markdown(f'<div class="mini-metric"><div class="label">우세 카테고리</div><div class="value" style="font-size:18px;">{CAT_ICONS.get(dominant_cat,"")} {dominant_cat}</div></div>', unsafe_allow_html=True)
+with m4: st.markdown(f'<div class="mini-metric"><div class="label">탐색 다양성</div><div class="value">{diversity} / 6</div></div>', unsafe_allow_html=True)
 
 st.write("")
 
 # =========================================================
-# 2-컬럼 레이아웃
+# 2-컬럼: 피드 + 분석
 # =========================================================
 left_col, right_col = st.columns([1.3, 1], gap="large")
 
-# ---------- 좌측: 추천 피드 ----------
 with left_col:
     st.markdown('<div class="section-title">📰 맞춤형 실시간 추천 피드</div>', unsafe_allow_html=True)
-
     with st.spinner("구글 뉴스에서 최신 기사를 불러오는 중..."):
         feed = get_feed()
-
     feed_col1, feed_col2 = st.columns(2, gap="medium")
-
     for i, item in enumerate(feed):
         target = feed_col1 if i % 2 == 0 else feed_col2
         with target:
             with st.container(border=True):
                 cat = item["category"]
                 icon = CAT_ICONS.get(cat, "📂")
-                st.markdown(
-                    f'<span class="cat-badge cat-{cat}">{icon} {cat}</span>',
-                    unsafe_allow_html=True
-                )
+                st.markdown(f'<span class="cat-badge cat-{cat}">{icon} {cat}</span>', unsafe_allow_html=True)
                 st.markdown(f'<div class="news-title">{item["title"]}</div>', unsafe_allow_html=True)
                 st.markdown(f'<div class="news-source">📡 {item["source"]}</div>', unsafe_allow_html=True)
                 if st.button("기사 보기 →", key=f"btn_{i}_{total_clicks}", use_container_width=True):
                     click_content(item)
                     st.rerun()
 
-# ---------- 우측: 실시간 분석 ----------
 with right_col:
     st.markdown('<div class="section-title">🤖 실시간 AI 분석</div>', unsafe_allow_html=True)
-
     bubble_meta = {
         1: ("LEVEL 1", "균형 상태", "다양한 정보가 고르게 추천되고 있습니다.", "bubble-lv1"),
         2: ("LEVEL 2", "버블 형성 시작", "특정 분야의 추천 비율이 늘기 시작했습니다.", "bubble-lv2"),
@@ -426,12 +396,10 @@ with right_col:
         4: ("LEVEL 4", "필터 버블 고착", "완전히 갇혔습니다. 좋아하는 정보만 보입니다.", "bubble-lv4"),
     }
     lv_label, lv_title, lv_desc, lv_class = bubble_meta[bubble_level]
-
-    dots_html = ""
-    for i in range(1, 5):
-        active = f"active-{bubble_level}" if i <= bubble_level else ""
-        dots_html += f'<div class="dot {active}"></div>'
-
+    dots_html = "".join([
+        f'<div class="dot {"active-"+str(bubble_level) if i <= bubble_level else ""}"></div>'
+        for i in range(1, 5)
+    ])
     st.markdown(f"""
     <div class="bubble-card {lv_class}">
       <div class="lv-label">{lv_label}</div>
@@ -461,10 +429,171 @@ with right_col:
     st.bar_chart(df.set_index("카테고리"), height=240, color="#4F46E5")
 
 # =========================================================
-# 하단: 탈출 팁
+# 하단: 필터 버블 탈출 체험 (핵심 신규 기능)
 # =========================================================
 st.divider()
-st.markdown('<div class="section-title">🛡️ 필터 버블에서 탈출하는 3가지 방법</div>', unsafe_allow_html=True)
+
+st.markdown("""
+<div class="escape-hero">
+  <h2>🪂 필터 버블 탈출 챌린지</h2>
+  <p>알고리즘이 숨겨버린 다른 시각의 뉴스를 직접 찾아 클릭해 보세요.<br>
+  <b>4가지 이상의 다양한 카테고리</b>를 탐색하면 필터 버블에서 탈출할 수 있습니다.</p>
+</div>
+""", unsafe_allow_html=True)
+
+# --- 탈출 시작 전: 진입 안내 ---
+if not st.session_state.escape_mode:
+    info_col, btn_col = st.columns([2, 1])
+    with info_col:
+        if total_clicks == 0:
+            st.info("🪴 먼저 위에서 기사 몇 개를 클릭해 본인의 알고리즘을 만들어 보세요. 그 후 탈출 체험이 의미 있어집니다.")
+        elif diversity >= 4:
+            st.success(f"✨ 이미 **{diversity}가지** 카테고리를 탐색했네요! 그래도 탈출 체험을 해보면 다양성의 가치를 더 잘 알 수 있어요.")
+        else:
+            st.warning(f"⚠️ 현재 **{diversity}가지** 카테고리만 보고 있어요. 탈출 챌린지를 시작해 시야를 넓혀봅시다.")
+    with btn_col:
+        st.write("")
+        if st.button("🚀 탈출 챌린지 시작하기", type="primary", use_container_width=True,
+                     disabled=(total_clicks == 0)):
+            start_escape()
+            st.rerun()
+
+# --- 탈출 모드 진행 중 ---
+else:
+    escape_diversity = len(set(st.session_state.escape_clicks))
+    GOAL = 4
+    progress_pct = min(100, int(escape_diversity / GOAL * 100))
+    escaped = escape_diversity >= GOAL
+
+    # 진행도 바
+    st.markdown(f"""
+    <div class="escape-progress-wrap">
+      <div class="escape-progress-label">
+        <span>🎯 다양성 회복 진행도</span>
+        <span style="color:#059669;">{escape_diversity} / {GOAL} 카테고리</span>
+      </div>
+      <div class="escape-progress-bar">
+        <div class="escape-progress-fill" style="width:{progress_pct}%;"></div>
+      </div>
+      <div class="escape-progress-meta">탈출 클릭 수: {len(st.session_state.escape_clicks)}회 · 목표: 서로 다른 {GOAL}개 카테고리 탐색</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    if escaped:
+        # 탈출 성공 화면
+        snap = st.session_state.pre_escape_snapshot
+        st.markdown("""
+        <div class="escape-success">
+          <div class="ttl">🎉 CHALLENGE COMPLETED</div>
+          <div class="msg">필터 버블 탈출 성공! 다양한 시각을 회복했습니다.</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Before / After 비교
+        st.markdown("##### 📊 Before vs After 비교")
+        before_dom = snap["dominant"]
+        after_dom = max(st.session_state.weights, key=st.session_state.weights.get)
+        before_div = snap["diversity"]
+        after_div = len(set(st.session_state.click_history))
+
+        ba1, ba2 = st.columns(2)
+        with ba1:
+            st.markdown(f"""
+            <div class="mini-metric">
+              <div class="label">BEFORE — 탈출 전</div>
+              <div class="value" style="font-size:16px;">우세: {CAT_ICONS.get(before_dom,'')} {before_dom}</div>
+              <div style="font-size:12px; color:#6B7280; margin-top:4px;">탐색 다양성: {before_div} / 6</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with ba2:
+            st.markdown(f"""
+            <div class="mini-metric" style="border-color:#10B981;">
+              <div class="label" style="color:#059669;">AFTER — 탈출 후</div>
+              <div class="value" style="font-size:16px;">우세: {CAT_ICONS.get(after_dom,'')} {after_dom}</div>
+              <div style="font-size:12px; color:#059669; margin-top:4px;">탐색 다양성: {after_div} / 6 ↑</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+        # 가중치 비교 차트
+        comp_df = pd.DataFrame({
+            "카테고리": [f"{CAT_ICONS[c]} {c}" for c in categories],
+            "Before": [snap["weights"][c] for c in categories],
+            "After":  [st.session_state.weights[c] for c in categories]
+        }).set_index("카테고리")
+        st.bar_chart(comp_df, height=260)
+
+        # 성찰 질문
+        st.markdown("##### 🧠 함께 생각해 봐요")
+        with st.container(border=True):
+            st.markdown("""
+            **Q1.** 평소에 잘 안 보던 카테고리의 기사를 읽으니 어떤 느낌이 들었나요?
+
+            **Q2.** 알고리즘이 나에게 보여주지 않았던 정보 중에 **중요한 내용**이 있었나요?
+
+            **Q3.** 일상에서 어떻게 하면 필터 버블에 갇히지 않을 수 있을까요?
+            """)
+
+        rc1, rc2 = st.columns(2)
+        with rc1:
+            if st.button("🔁 다시 탈출 챌린지 도전", use_container_width=True):
+                st.session_state.escape_mode = False
+                st.session_state.escape_clicks = []
+                st.rerun()
+        with rc2:
+            if st.button("🌱 모든 기록 초기화", type="primary", use_container_width=True):
+                reset_all()
+                st.rerun()
+
+    else:
+        # 진행 중 — 안 본 카테고리 카드 추천
+        missed = get_missed_categories()
+        if not missed:
+            missed = [c for c in categories if c not in st.session_state.escape_clicks[-2:]]
+
+        st.markdown("##### 🔍 알고리즘이 가렸던 다른 시각들")
+        st.caption("아래 카테고리는 여러분이 평소에 잘 보지 않은 분야입니다. 한 번 클릭해 새로운 관점을 만나보세요.")
+
+        # 안 본 카테고리에서 기사 1개씩 뽑아 카드로 표시
+        miss_cols = st.columns(min(3, len(missed)))
+        for idx, cat in enumerate(missed[:3]):
+            with miss_cols[idx]:
+                pool = fetch_google_news(cat, is_extreme=False) or get_fallback_items(cat, False)
+                sample = random.choice(pool) if pool else {"title": f"{cat} 분야 기사", "source": "예시"}
+
+                st.markdown(f"""
+                <div class="missed-card">
+                  <div class="ttl">📂 안 본 카테고리</div>
+                  <div class="name">{CAT_ICONS[cat]} {cat}</div>
+                  <div class="desc">{CAT_DESC[cat]}</div>
+                  <hr style="border:none; border-top:1px solid #F3F4F6; margin:10px 0;">
+                  <div style="font-size:13px; font-weight:600; color:#1F2937; line-height:1.4;">{sample['title']}</div>
+                  <div style="font-size:11px; color:#9CA3AF; margin-top:4px;">📡 {sample['source']}</div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                if st.button(f"이 시각 탐색하기", key=f"escape_{cat}_{len(st.session_state.escape_clicks)}",
+                             use_container_width=True):
+                    escape_click(cat)
+                    st.rerun()
+
+        # 진행 중 격려 메시지
+        if escape_diversity == 0:
+            st.info("👆 위 카드 중 하나를 클릭해 첫 발걸음을 시작하세요!")
+        elif escape_diversity < GOAL:
+            remain = GOAL - escape_diversity
+            st.success(f"💪 잘하고 있어요! {remain}가지 카테고리만 더 탐색하면 탈출 성공입니다.")
+
+        # 탈출 모드 중단
+        if st.button("✖️ 챌린지 중단", use_container_width=False):
+            st.session_state.escape_mode = False
+            st.session_state.escape_clicks = []
+            st.rerun()
+
+# =========================================================
+# 일상 속 탈출 팁
+# =========================================================
+st.divider()
+st.markdown('<div class="section-title">🛡️ 일상 속 필터 버블 탈출 습관</div>', unsafe_allow_html=True)
 
 e1, e2, e3 = st.columns(3, gap="medium")
 with e1:
@@ -503,8 +632,6 @@ with b1:
     st.success("✅ 필터 버블 (Filter Bubble) · ✅ 확증 편향 (Confirmation Bias) · ✅ 추천 알고리즘 윤리 · ✅ 디지털 리터러시")
 with b2:
     st.write("")
-    if st.button("🔄 기록 초기화 (버블 탈출)", type="primary", use_container_width=True):
-        st.session_state.weights = {cat: 1 for cat in categories}
-        st.session_state.click_history = []
-        st.cache_data.clear()
+    if st.button("🔄 모든 기록 초기화", type="primary", use_container_width=True):
+        reset_all()
         st.rerun()
