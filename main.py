@@ -171,13 +171,16 @@ st.markdown(f"""
         padding-left: 42px;
     }}
 
-    /* 위험성 카드 */
+    /* ✅ 위험성 카드 - 높이 통일 (flexbox + min-height) */
     .danger-card {{
         background: {PASTEL["card"]};
         border: 1px solid {PASTEL["border"]};
         border-radius: 16px;
         padding: 20px 22px;
-        height: 100%;
+        margin-bottom: 14px;
+        min-height: 175px;
+        display: flex;
+        flex-direction: column;
     }}
     .danger-card .danger-icon {{
         font-size: 28px; margin-bottom: 8px;
@@ -190,6 +193,7 @@ st.markdown(f"""
     .danger-card .danger-desc {{
         font-size: 13px; color: {PASTEL["text_soft"]};
         line-height: 1.6;
+        flex-grow: 1;
     }}
 
     /* 사례 카드 */
@@ -242,7 +246,7 @@ st.markdown(f"""
         transition: all 0.2s ease;
     }}
     .flow-card.step1 {{ border-color: {PASTEL["pink"]}; }}
-    .flow-card.step2 {{ border-color: {PASTEL["yellow"]}; }}
+    .flow-card.step2 {{ border-color: {PASTEL["sky"]}; }}
     .flow-card.step3 {{ border-color: {PASTEL["mint"]}; }}
     .flow-card .flow-num {{
         font-size: 11px; font-weight: 700;
@@ -418,7 +422,7 @@ for i, (title, desc) in enumerate(steps, 1):
     """, unsafe_allow_html=True)
 
 # =========================================================
-# 3) 왜 위험할까?
+# 3) 왜 위험할까? (✅ 카드 높이 통일)
 # =========================================================
 st.markdown('<div class="section-title">⚠️ 필터 버블이 왜 위험할까요?</div>', unsafe_allow_html=True)
 
@@ -436,7 +440,7 @@ for i, (icon, title, desc) in enumerate(dangers):
     target = [dcol1, dcol2, dcol3][i % 3]
     with target:
         st.markdown(f"""
-        <div class="danger-card" style="margin-bottom:14px;">
+        <div class="danger-card">
           <div class="danger-icon">{icon}</div>
           <div class="danger-title">{title}</div>
           <div class="danger-desc">{desc}</div>
@@ -571,7 +575,7 @@ for i, c in enumerate(checks):
         """, unsafe_allow_html=True)
 
 # =========================================================
-# 7) 수업 흐름 안내
+# 7) 수업 흐름 안내 (✅ 순서: 체험 → 지도 → 퀴즈)
 # =========================================================
 st.markdown('<div class="section-title">🚀 이제 직접 체험해 봐요</div>', unsafe_allow_html=True)
 st.markdown(f"""
@@ -600,20 +604,6 @@ with f2:
     st.markdown("""
     <div class="flow-card step2">
       <div class="flow-num">STEP 02</div>
-      <div class="flow-emoji">🧠</div>
-      <div class="flow-title">AI 윤리 퀴즈</div>
-      <div class="flow-desc">
-        체험 데이터를 바탕으로<br>
-        맞춤형 퀴즈를 풀며<br>
-        개념을 점검해요
-      </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-with f3:
-    st.markdown("""
-    <div class="flow-card step3">
-      <div class="flow-num">STEP 03</div>
       <div class="flow-emoji">🗺️</div>
       <div class="flow-title">나의 버블 지도</div>
       <div class="flow-desc">
@@ -624,19 +614,33 @@ with f3:
     </div>
     """, unsafe_allow_html=True)
 
+with f3:
+    st.markdown("""
+    <div class="flow-card step3">
+      <div class="flow-num">STEP 03</div>
+      <div class="flow-emoji">🧠</div>
+      <div class="flow-title">AI 윤리 퀴즈</div>
+      <div class="flow-desc">
+        체험 데이터를 바탕으로<br>
+        맞춤형 퀴즈를 풀며<br>
+        개념을 점검해요
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
 st.write("")
 
-# 이동 버튼
+# ✅ 이동 버튼 (순서: 체험 → 지도 → 퀴즈, 경로 수정)
 b1, b2, b3 = st.columns(3, gap="medium")
 with b1:
     if st.button("🫧 1단계 · 버블 체험 시작하기", type="primary", use_container_width=True):
-        st.switch_page("pages/01_bubble_test.py")
+        st.switch_page("pages/bubble2.py")
 with b2:
-    if st.button("🧠 2단계 · 퀴즈로 이동", use_container_width=True):
-        st.switch_page("pages/02_quiz.py")
+    if st.button("🗺️ 2단계 · 지도로 이동", use_container_width=True):
+        st.switch_page("pages/map.py")
 with b3:
-    if st.button("🗺️ 3단계 · 지도로 이동", use_container_width=True):
-        st.switch_page("pages/03_map.py")
+    if st.button("🧠 3단계 · 퀴즈로 이동", use_container_width=True):
+        st.switch_page("pages/quiz.py")
 
 # =========================================================
 # 푸터
