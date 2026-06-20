@@ -11,7 +11,7 @@ import re
 st.set_page_config(page_title="추천 알고리즘 버블 체험", page_icon="🫧", layout="wide")
 
 # -----------------------
-# 세션 상태 초기화 (카테고리도 동적으로 추가할 수 있도록 세션에 저장)
+# 세션 상태 초기화 및 관리
 # -----------------------
 default_categories = ["스포츠", "정치", "게임", "연예", "사건사고", "교육"]
 
@@ -26,6 +26,37 @@ if "click_history" not in st.session_state:
 
 if "selected_article" not in st.session_state:
     st.session_state.selected_article = None
+
+# --- 버튼 클릭 시 즉시 실행되는 콜백(Callback) 함수들 ---
+def click_content(item):
+    cat = item["category"]
+    st.session_state.click_history.append(cat)
+    st.session_state.weights[cat] += 3
+    st.session_state.selected_article = item 
+
+def close_article():
+    st.session_state.selected_article = None
+
+def reset_all():
+    st.session_state.categories = default_categories.copy()
+    st.session_state.weights = {cat: 1 for cat in st.session_state.categories}
+    st.session_state.click_history = []
+    st.session_state.selected_article = None
+
+def break_bubble():
+    kw = st.session_state.get("new_keyword", "").strip()
+    sel = st.session_state.get("new_select", "선택안함")
+    target = kw if kw else (sel if sel != "선택안함" else "")
+    
+    if target:
+        if target not in st.session_state.categories:
+            st.session_state.categories.append(target)
+        
+        st.session_state.weights = {cat: 1 for cat in st.session_state.categories}
+        st.session_state.weights[target] = 5
+        st.session_state.click_history = []
+        st.session_state.selected_article = None
+# --------------------------------------------------------
 
 # -----------------------
 # 구글 뉴스 RSS 연동 함수 (캐싱 적용)
@@ -91,7 +122,6 @@ def get_feed():
     for cat in st.session_state.categories:
         weighted_categories.extend([cat] * st.session_state.weights[cat])
     
-    # 카테고리가 비어있을 경우 예외처리
     if not weighted_categories:
         return []
 
@@ -102,177 +132,11 @@ def get_feed():
     for cat, count in cat_counts.items():
         news_pool = fetch_google_news(cat, is_extreme)
         
-        # API 실패 시 더미 데이터로 대체
         if not news_pool or len(news_pool) < count:
-            # 사용자가 직접 추가한 검색어의 경우 기본 더미 생성
             if cat in normal_titles:
                 titles_pool = extreme_titles[cat] if is_extreme else normal_titles[cat]
             else:
                 titles_pool = [f"📰 [{cat}] 관련 최신 뉴스", f"🔍 [{cat}]에 대한 심층 분석", f"💡 [{cat}] 전문가 의견", f"📈 [{cat}] 관련 이슈 트렌드"]
 
             sampled_titles = random.sample(titles_pool, count) if count <= len(titles_pool) else random.choices(titles_pool, k=count)
-            
-            sampled_news = [{"title": t, "link": "https://news.google.com"} for t in sampled_titles]
-        else:
-            sampled_news = random.sample(news_pool, count) if count <= len(news_pool) else random.choices(news_pool, k=count)
-            
-        for news in sampled_news:
-            display_title = news['title'] if (" " in news['title'] and news['title'].startswith("🚨")) else f"🗞️ {news['title']}"
-            feed.append({
-                "title": display_title, 
-                "link": news['link'], 
-                "category": cat
-            })
-            
-    random.shuffle(feed)
-    return feed
-
-def click_content(item):
-    cat = item["category"]
-    st.session_state.click_history.append(cat)
-    st.session_state.weights[cat] += 3
-    st.session_state.selected_article = item 
-
-def analyze_personality():
-    history = st.session_state.click_history
-    if len(history) == 0:
-        return "분석 대기 중 ⏳", "콘텐츠를 클릭하면 분석이 시작됩니다."
-
-    counts = {cat: history.count(cat) for cat in st.session_state.categories}
-    dominant = max(counts, key=counts.get)
-
-    if len(set(history)) >= 4:
-        return "균형 탐색형 🌍", "다양한 분야의 관점을 고르게 탐색하는 건강한 성향입니다."
-
-    # 기본 카테고리가 아닐 경우 동적으로 성향 표시
-    labels = {
-        "스포츠": "스포츠 몰입형 ⚽", "정치": "이슈 집중형 🗳️", "게임": "몰입형 게이머 🎮",
-        "연예": "트렌드 민감형 🎤", "사건사고": "도파민 추구형 🚨", "교육": "지식 탐구형 📚"
-    }
-    ptype = labels.get(dominant, f"{dominant} 탐구형 🔍")
-    return ptype, f"현재 **{dominant}** 콘텐츠를 집중적으로 소비하고 있습니다."
-
-# -----------------------
-# 메인 UI 구성
-# -----------------------
-st.title("📱 추천 알고리즘과 필터 버블 체험")
-st.markdown("**마음에 드는 기사를 계속 클릭해 보세요. AI가 여러분의 취향을 학습하여 화면을 바꿉니다!**")
-st.write("") 
-
-left_col, right_col = st.columns([1.2, 1])
-
-# --- 좌측: 맞춤형 추천 피드 ---
-with left_col:
-    st.subheader("📰 맞춤형 실시간 추천 피드")
-    
-    if st.session_state.selected_article:
-        with st.container(border=True):
-            st.markdown("### 👀 방금 클릭한 기사")
-            st.markdown(f"**{st.session_state.selected_article['title']}**")
-            st.link_button("🌐 구글 뉴스 원문 보러가기", st.session_state.selected_article['link'])
-            
-            if st.button("❌ 닫기"):
-                st.session_state.selected_article = None
-                st.rerun()
-        st.divider()
-
-    feed = get_feed()
-    
-    if feed:
-        feed_col1, feed_col2 = st.columns(2)
-        for i, item in enumerate(feed):
-            target_col = feed_col1 if i % 2 == 0 else feed_col2
-            with target_col:
-                with st.container(border=True):
-                    st.markdown(f"**{item['title']}**")
-                    st.caption(f"📂 카테고리: {item['category']}")
-                    
-                    if st.button("클릭하여 보기", key=f"btn_{i}_{len(st.session_state.click_history)}_{item['category']}", use_container_width=True):
-                        click_content(item)
-                        st.rerun()
-
-# --- 우측: 실시간 분석 대시보드 ---
-with right_col:
-    st.subheader("🤖 실시간 AI 분석")
-    total_clicks = len(st.session_state.click_history)
-    bubble_level = get_bubble_level()
-
-    if bubble_level == 1:
-        st.success("🟢 **1단계: 균형 상태**\n\n다양한 정보가 고르게 추천되고 있습니다.")
-    elif bubble_level == 2:
-        st.warning("🟡 **2단계: 버블 형성 시작**\n\n특정 분야의 추천 비율이 슬슬 늘어나고 있습니다.")
-    elif bubble_level == 3:
-        st.error("🟠 **3단계: 버블 심화 (주의!)**\n\n자극적인 기사가 늘고, 다른 분야의 정보가 사라지고 있습니다.")
-    else:
-        st.error("🔴 **4단계: 필터 버블 고착화 (확증 편향)**\n\n완전히 갇혔습니다! 내가 좋아하는 정보만 보입니다.")
-
-    ptype, desc = analyze_personality()
-    with st.expander("📋 나의 디지털 성향 분석 결과", expanded=True):
-        st.markdown(f"### {ptype}")
-        st.write(desc)
-        
-        if total_clicks >= 5:
-            dominant = max(st.session_state.weights, key=st.session_state.weights.get)
-            st.warning(f"🚨 경고: 정보 환경이 **{dominant}** 위주로 좁아지고 있습니다.")
-
-    st.markdown(f"**📊 카테고리별 AI 추천 가중치 (총 클릭: {total_clicks}회)**")
-    df = pd.DataFrame({
-        "카테고리": list(st.session_state.weights.keys()),
-        "추천 강도": list(st.session_state.weights.values())
-    })
-    st.bar_chart(df.set_index("카테고리"), height=250)
-
-# -----------------------
-# 하단: 버블 해제(탈출) 및 새로운 관심사 검색
-# -----------------------
-st.divider()
-st.subheader("🛡️ 필터 버블 해제하기: 능동적 탐색")
-st.markdown("수동적으로 AI가 주는 정보만 받지 말고, **내가 직접 새로운 분야를 검색**하면 갇혀있던 버블을 깰 수 있습니다.")
-
-# 검색 및 선택 UI 구성
-search_col1, search_col2 = st.columns(2)
-
-with search_col1:
-    new_keyword = st.text_input("🔍 1. 새로운 관심사 직접 검색", placeholder="예: 우주 과학, 환경 보호, 인공지능 등")
-
-with search_col2:
-    new_select = st.selectbox("📌 2. 또는 추천 키워드 선택", ["선택안함", "환경/기후변화", "우주 탐사", "세계 역사", "클래식 음악", "미술/전시", "경제/재테크", "심리학"])
-
-# 버블 깨기 실행 버튼
-if st.button("🚀 이 키워드로 알고리즘 버블 깨기!", type="primary", use_container_width=True):
-    # 직접 입력한 키워드를 우선하고, 없으면 선택박스 값을 사용
-    target_keyword = new_keyword.strip() if new_keyword.strip() else (new_select if new_select != "선택안함" else "")
-    
-    if target_keyword:
-        # 1. 새 키워드가 기존 카테고리에 없으면 추가
-        if target_keyword not in st.session_state.categories:
-            st.session_state.categories.append(target_keyword)
-        
-        # 2. 알고리즘 초기화: 기존 가중치를 기본값으로 돌리고, 새 키워드에 높은 관심도(5) 부여
-        st.session_state.weights = {cat: 1 for cat in st.session_state.categories}
-        st.session_state.weights[target_keyword] = 5
-        
-        # 3. 클릭 기록(버블) 초기화 및 선택 기사 닫기
-        st.session_state.click_history = []
-        st.session_state.selected_article = None
-        
-        st.rerun()
-    else:
-        st.warning("⚠️ 검색어를 입력하거나 추천 키워드를 선택해주세요.")
-
-st.write("") 
-
-# 핵심 키워드 및 완전 초기화 버튼
-bottom_col1, bottom_col2 = st.columns([3, 1])
-with bottom_col1:
-    st.markdown("#### 🎓 수업 핵심 키워드")
-    st.info("✅ **필터 버블 (Filter Bubble)** | ✅ **확증 편향 (Confirmation Bias)** | ✅ **추천 알고리즘 윤리** | ✅ **디지털 능동성**")
-
-with bottom_col2:
-    st.write("") 
-    if st.button("🔄 전체 초기화 (처음부터 다시)", use_container_width=True):
-        st.session_state.categories = default_categories.copy()
-        st.session_state.weights = {cat: 1 for cat in st.session_state.categories}
-        st.session_state.click_history = []
-        st.session_state.selected_article = None
-        st.rerun()
+            sampled_news = [{"title": t
