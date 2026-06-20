@@ -1,280 +1,653 @@
 import streamlit as st
-import random
-import pandas as pd
-import feedparser
-import urllib.parse
-import re
 
-# -----------------------
-# 페이지 설정 
-# -----------------------
-st.set_page_config(page_title="추천 알고리즘 버블 체험", page_icon="🫧", layout="wide")
+# =========================================================
+# 페이지 설정
+# =========================================================
+st.set_page_config(
+    page_title="필터 버블 이해하기",
+    page_icon="🫧",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# -----------------------
-# 세션 상태 초기화 및 관리
-# -----------------------
-default_categories = ["스포츠", "정치", "게임", "연예", "사건사고", "교육"]
-
-if "categories" not in st.session_state:
-    st.session_state.categories = default_categories.copy()
-
-if "weights" not in st.session_state:
-    st.session_state.weights = {cat: 1 for cat in st.session_state.categories}
-
-if "click_history" not in st.session_state:
-    st.session_state.click_history = []
-
-if "selected_article" not in st.session_state:
-    st.session_state.selected_article = None
-
-# --- 버튼 클릭 시 즉시 실행되는 콜백(Callback) 함수들 ---
-def click_content(item):
-    cat = item["category"]
-    st.session_state.click_history.append(cat)
-    st.session_state.weights[cat] += 3
-    st.session_state.selected_article = item 
-
-def close_article():
-    st.session_state.selected_article = None
-
-def reset_all():
-    st.session_state.categories = default_categories.copy()
-    st.session_state.weights = {cat: 1 for cat in st.session_state.categories}
-    st.session_state.click_history = []
-    st.session_state.selected_article = None
-
-def break_bubble():
-    kw = st.session_state.get("new_keyword", "").strip()
-    sel = st.session_state.get("new_select", "선택안함")
-    target = kw if kw else (sel if sel != "선택안함" else "")
-    
-    if target:
-        if target not in st.session_state.categories:
-            st.session_state.categories.append(target)
-        
-        st.session_state.weights = {cat: 1 for cat in st.session_state.categories}
-        st.session_state.weights[target] = 5
-        st.session_state.click_history = []
-        st.session_state.selected_article = None
-# --------------------------------------------------------
-
-# -----------------------
-# 구글 뉴스 RSS 연동 함수 (캐싱 적용)
-# -----------------------
-@st.cache_data(ttl=1800, show_spinner=False)
-def fetch_google_news(category, is_extreme):
-    search_query = category
-    if is_extreme:
-        search_query += " (논란 OR 충격 OR 분노 OR 단독 OR 의혹)"
-    
-    encoded_query = urllib.parse.quote(search_query)
-    rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=ko&gl=KR&ceid=KR:ko"
-    
-    try:
-        feed = feedparser.parse(rss_url)
-        news_data = []
-        for entry in feed.entries[:20]:
-            clean_title = re.sub(r' - .+$', '', entry.title)
-            news_data.append({
-                "title": clean_title,
-                "link": entry.link
-            })
-        return news_data if news_data else None
-    except Exception as e:
-        return None
-
-# -----------------------
-# 기사 제목 데이터베이스 (안전장치용 더미 데이터)
-# -----------------------
-normal_titles = {
-    "스포츠": ["⚽ 손흥민, 경기 MVP 선정", "🏀 NBA 플레이오프 명승부", "⚾ 프로야구 순위 경쟁 치열"],
-    "정치": ["🗳️ 정책 토론 주요 쟁점", "📢 사회 현안 논의 확대", "🏛️ 정부 정책 발표"],
-    "게임": ["🎮 신작 게임 출시 기대감", "🔥 인기 게임 e스포츠 대회 개최", "🕹️ 게이밍 트렌드 변화 분석"],
-    "연예": ["🎤 인기 아이돌 성공적인 컴백", "🎬 화제의 웹드라마 전편 공개", "📺 주말 예능 프로그램 시청률 1위"],
-    "교육": ["📚 AI 시대가 바꾸는 교실 풍경", "🧠 뇌과학 기반 효과적인 공부법 연구", "💡 10년 뒤 미래 직업 변화 전망"],
-    "사건사고": ["경찰, 대규모 보이스피싱 일당 검거", "주말 고속도로 다중 추돌 사고", "전국적인 집중 호우 대비 태세"]
+# =========================================================
+# 파스텔 디자인 시스템
+# =========================================================
+PASTEL = {
+    "bg":        "#FAF7FF",
+    "card":      "#FFFFFF",
+    "lavender":  "#C7B8FF",
+    "mint":      "#A8E6CF",
+    "peach":     "#FFD3B6",
+    "pink":      "#FFC8DD",
+    "sky":       "#B5D8FA",
+    "yellow":    "#FFE5A0",
+    "coral":     "#FFAAA5",
+    "text":      "#5B5170",
+    "text_soft": "#8B82A8",
+    "border":    "#EFE9F7",
+    "muted":     "#D8D4E8"
 }
 
-extreme_titles = {
-    "스포츠": ["⚽ 충격! 대표팀 대참사", "🏀 역대급 오심 논란, 팬들 분노"],
-    "정치": ["🚨 정치권 초비상 사태", "🔥 국민 여론 폭발, 대규모 시위 예고"],
-    "게임": ["🎮 역대급 게임 중독 논란 확산", "🔥 서버 터짐! 유저들 분노 폭발"],
-    "연예": ["😱 연예계 발칵 뒤집힌 충격 소식", "🔥 팬들 멘붕, 단독 열애설 포착"],
-    "교육": ["🚨 AI가 모든 교사를 완전히 대체한다?", "😱 10년 후 완전히 멸종할 직업 리스트"],
-    "사건사고": ["🚨 충격 단독! 전 국민이 속고 있었다", "😱 충격적인 흉악 범죄 발생, 시민들 불안"]
-}
+# =========================================================
+# 커스텀 CSS
+# =========================================================
+st.markdown(f"""
+<style>
+    .stApp {{ background-color: {PASTEL["bg"]}; }}
+    .main .block-container {{ padding-top: 2rem; max-width: 1100px; }}
 
-# -----------------------
-# 추천 알고리즘 로직
-# -----------------------
-def get_bubble_level():
-    clicks = len(st.session_state.click_history)
-    if clicks <= 2: return 1
-    elif clicks <= 5: return 2
-    elif clicks <= 9: return 3
-    return 4
+    /* 헤로 배너 */
+    .main-hero {{
+        background: linear-gradient(135deg, #FFC8DD 0%, #C7B8FF 50%, #B5D8FA 100%);
+        padding: 40px 36px;
+        border-radius: 24px;
+        margin-bottom: 28px;
+        text-align: center;
+    }}
+    .main-hero .badge {{
+        display: inline-block;
+        background: rgba(255,255,255,0.4);
+        color: white;
+        font-size: 12px; font-weight: 700;
+        padding: 6px 14px;
+        border-radius: 12px;
+        margin-bottom: 14px;
+        letter-spacing: 1px;
+    }}
+    .main-hero h1 {{
+        color: white !important;
+        font-size: 34px; font-weight: 800;
+        margin: 0 0 12px 0;
+        letter-spacing: -1px;
+    }}
+    .main-hero p {{
+        color: rgba(255,255,255,0.95);
+        font-size: 15px;
+        margin: 0; line-height: 1.7;
+        max-width: 700px;
+        margin-left: auto; margin-right: auto;
+    }}
 
-def get_feed():
-    bubble_level = get_bubble_level()
-    is_extreme = bubble_level >= 3
-    
-    weighted_categories = []
-    for cat in st.session_state.categories:
-        weighted_categories.extend([cat] * st.session_state.weights[cat])
-    
-    if not weighted_categories:
-        return []
+    /* 섹션 타이틀 */
+    .section-title {{
+        font-size: 22px; font-weight: 700;
+        color: {PASTEL["text"]};
+        margin: 28px 0 16px 0;
+        letter-spacing: -0.5px;
+        display: flex; align-items: center; gap: 10px;
+    }}
+    .section-title::before {{
+        content: "";
+        display: inline-block;
+        width: 4px; height: 22px;
+        background: {PASTEL["lavender"]};
+        border-radius: 2px;
+    }}
 
-    chosen_categories = random.choices(weighted_categories, k=6)
-    cat_counts = {cat: chosen_categories.count(cat) for cat in set(chosen_categories)}
-    
-    feed = []
-    for cat, count in cat_counts.items():
-        news_pool = fetch_google_news(cat, is_extreme)
-        
-        if not news_pool or len(news_pool) < count:
-            if cat in normal_titles:
-                titles_pool = extreme_titles[cat] if is_extreme else normal_titles[cat]
-            else:
-                titles_pool = [f"📰 [{cat}] 관련 최신 뉴스", f"🔍 [{cat}]에 대한 심층 분석", f"💡 [{cat}] 전문가 의견", f"📈 [{cat}] 관련 이슈 트렌드"]
+    /* 카드 */
+    .concept-card {{
+        background: {PASTEL["card"]};
+        border: 1px solid {PASTEL["border"]};
+        border-radius: 18px;
+        padding: 24px 26px;
+        margin-bottom: 16px;
+        height: 100%;
+    }}
+    .concept-card .card-icon {{
+        font-size: 32px; margin-bottom: 10px;
+    }}
+    .concept-card .card-title {{
+        font-size: 17px; font-weight: 700;
+        color: {PASTEL["text"]};
+        margin-bottom: 8px;
+    }}
+    .concept-card .card-desc {{
+        font-size: 13px; color: {PASTEL["text_soft"]};
+        line-height: 1.7;
+    }}
 
-            sampled_titles = random.sample(titles_pool, count) if count <= len(titles_pool) else random.choices(titles_pool, k=count)
-            sampled_news = [{"title": t, "link": "https://news.google.com"} for t in sampled_titles]
-        else:
-            sampled_news = random.sample(news_pool, count) if count <= len(news_pool) else random.choices(news_pool, k=count)
-            
-        for news in sampled_news:
-            display_title = news['title'] if (" " in news['title'] and news['title'].startswith("🚨")) else f"🗞️ {news['title']}"
-            feed.append({
-                "title": display_title, 
-                "link": news['link'], 
-                "category": cat
-            })
-            
-    random.shuffle(feed)
-    return feed
+    /* 정의 카드 (강조) */
+    .definition-card {{
+        background: {PASTEL["card"]};
+        border: 1px solid {PASTEL["border"]};
+        border-left: 6px solid {PASTEL["lavender"]};
+        border-radius: 16px;
+        padding: 22px 26px;
+        margin-bottom: 16px;
+    }}
+    .definition-card .term {{
+        font-size: 13px; font-weight: 700;
+        color: {PASTEL["lavender"]};
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+    }}
+    .definition-card .term-ko {{
+        font-size: 20px; font-weight: 700;
+        color: {PASTEL["text"]};
+        margin-bottom: 10px;
+    }}
+    .definition-card .term-def {{
+        font-size: 14px; color: {PASTEL["text"]};
+        line-height: 1.8;
+    }}
+    .definition-card .term-source {{
+        font-size: 11px; color: {PASTEL["text_soft"]};
+        margin-top: 10px;
+        font-style: italic;
+    }}
 
-def analyze_personality():
-    history = st.session_state.click_history
-    if len(history) == 0:
-        return "분석 대기 중 ⏳", "콘텐츠를 클릭하면 분석이 시작됩니다."
+    /* 원리 단계 카드 */
+    .step-card {{
+        background: {PASTEL["card"]};
+        border: 1px solid {PASTEL["border"]};
+        border-radius: 16px;
+        padding: 20px 22px;
+        margin-bottom: 12px;
+        position: relative;
+    }}
+    .step-card .step-num {{
+        display: inline-block;
+        width: 32px; height: 32px;
+        background: {PASTEL["lavender"]};
+        color: white;
+        border-radius: 10px;
+        text-align: center;
+        line-height: 32px;
+        font-weight: 700; font-size: 14px;
+        margin-right: 10px;
+    }}
+    .step-card .step-title {{
+        font-size: 16px; font-weight: 700;
+        color: {PASTEL["text"]};
+        display: inline-block;
+        vertical-align: middle;
+    }}
+    .step-card .step-desc {{
+        font-size: 13px; color: {PASTEL["text_soft"]};
+        line-height: 1.7;
+        margin-top: 10px;
+        padding-left: 42px;
+    }}
 
-    counts = {cat: history.count(cat) for cat in st.session_state.categories}
-    dominant = max(counts, key=counts.get)
+    /* 위험성 카드 */
+    .danger-card {{
+        background: {PASTEL["card"]};
+        border: 1px solid {PASTEL["border"]};
+        border-radius: 16px;
+        padding: 20px 22px;
+        height: 100%;
+    }}
+    .danger-card .danger-icon {{
+        font-size: 28px; margin-bottom: 8px;
+    }}
+    .danger-card .danger-title {{
+        font-size: 15px; font-weight: 700;
+        color: {PASTEL["text"]};
+        margin-bottom: 6px;
+    }}
+    .danger-card .danger-desc {{
+        font-size: 13px; color: {PASTEL["text_soft"]};
+        line-height: 1.6;
+    }}
 
-    if len(set(history)) >= 4:
-        return "균형 탐색형 🌍", "다양한 분야의 관점을 고르게 탐색하는 건강한 성향입니다."
+    /* 사례 카드 */
+    .case-card {{
+        background: {PASTEL["card"]};
+        border: 1px solid {PASTEL["border"]};
+        border-radius: 14px;
+        padding: 16px 18px;
+        margin-bottom: 10px;
+    }}
+    .case-card .case-platform {{
+        font-size: 11px; font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 3px 10px;
+        border-radius: 8px;
+        display: inline-block;
+        margin-bottom: 8px;
+    }}
+    .case-card .case-text {{
+        font-size: 13px; color: {PASTEL["text"]};
+        line-height: 1.7;
+    }}
 
-    labels = {
-        "스포츠": "스포츠 몰입형 ⚽", "정치": "이슈 집중형 🗳️", "게임": "몰입형 게이머 🎮",
-        "연예": "트렌드 민감형 🎤", "사건사고": "도파민 추구형 🚨", "교육": "지식 탐구형 📚"
-    }
-    ptype = labels.get(dominant, f"{dominant} 탐구형 🔍")
-    return ptype, f"현재 **{dominant}** 콘텐츠를 집중적으로 소비하고 있습니다."
+    /* 관련 개념 카드 */
+    .related-card {{
+        background: {PASTEL["card"]};
+        border: 1px solid {PASTEL["border"]};
+        border-radius: 14px;
+        padding: 18px 20px;
+        margin-bottom: 12px;
+    }}
+    .related-card .rel-title {{
+        font-size: 15px; font-weight: 700;
+        color: {PASTEL["text"]};
+        margin-bottom: 6px;
+    }}
+    .related-card .rel-desc {{
+        font-size: 13px; color: {PASTEL["text_soft"]};
+        line-height: 1.6;
+    }}
 
-# -----------------------
-# 메인 UI 구성
-# -----------------------
-st.title("📱 추천 알고리즘과 필터 버블 체험")
-st.markdown("**마음에 드는 기사를 계속 클릭해 보세요. AI가 여러분의 취향을 학습하여 화면을 바꿉니다!**")
-st.write("") 
+    /* 수업 흐름 카드 */
+    .flow-card {{
+        background: {PASTEL["card"]};
+        border: 2px solid {PASTEL["border"]};
+        border-radius: 18px;
+        padding: 22px 24px;
+        text-align: center;
+        height: 100%;
+        transition: all 0.2s ease;
+    }}
+    .flow-card.step1 {{ border-color: {PASTEL["pink"]}; }}
+    .flow-card.step2 {{ border-color: {PASTEL["yellow"]}; }}
+    .flow-card.step3 {{ border-color: {PASTEL["mint"]}; }}
+    .flow-card .flow-num {{
+        font-size: 11px; font-weight: 700;
+        color: {PASTEL["text_soft"]};
+        letter-spacing: 1px;
+    }}
+    .flow-card .flow-emoji {{
+        font-size: 40px;
+        margin: 8px 0;
+    }}
+    .flow-card .flow-title {{
+        font-size: 16px; font-weight: 700;
+        color: {PASTEL["text"]};
+        margin-bottom: 6px;
+    }}
+    .flow-card .flow-desc {{
+        font-size: 12px; color: {PASTEL["text_soft"]};
+        line-height: 1.6;
+    }}
 
-left_col, right_col = st.columns([1.2, 1])
+    /* 인용구 */
+    .quote-box {{
+        background: linear-gradient(135deg, #FFF7E6 0%, #FFE5A0 100%);
+        border-radius: 18px;
+        padding: 24px 28px;
+        margin: 20px 0;
+        text-align: center;
+    }}
+    .quote-box .quote-mark {{
+        font-size: 36px;
+        color: rgba(91, 81, 112, 0.3);
+        line-height: 1;
+    }}
+    .quote-box .quote-text {{
+        font-size: 16px;
+        color: {PASTEL["text"]};
+        font-weight: 600;
+        line-height: 1.6;
+        margin: 6px 0;
+    }}
+    .quote-box .quote-author {{
+        font-size: 12px;
+        color: {PASTEL["text_soft"]};
+        margin-top: 8px;
+    }}
 
-# --- 좌측: 맞춤형 추천 피드 ---
-with left_col:
-    st.subheader("📰 맞춤형 실시간 추천 피드")
-    
-    # 선택된 기사가 있을 때 원문 링크를 보여주는 영역
-    if st.session_state.selected_article:
-        with st.container(border=True):
-            st.markdown("### 👀 방금 클릭한 기사")
-            st.markdown(f"**{st.session_state.selected_article['title']}**")
-            st.link_button("🌐 구글 뉴스 원문 보러가기", st.session_state.selected_article['link'])
-            
-            # 닫기 버튼에도 on_click 콜백 적용
-            st.button("❌ 닫기", on_click=close_article)
-        st.divider()
+    /* 체크리스트 */
+    .check-item {{
+        background: {PASTEL["card"]};
+        border: 1px solid {PASTEL["border"]};
+        border-radius: 12px;
+        padding: 12px 16px;
+        margin-bottom: 8px;
+        font-size: 13px;
+        color: {PASTEL["text"]};
+        line-height: 1.6;
+    }}
+    .check-item .check-mark {{
+        color: {PASTEL["mint"]};
+        font-weight: 700;
+        margin-right: 8px;
+    }}
 
-    feed = get_feed()
-    
-    if feed:
-        feed_col1, feed_col2 = st.columns(2)
-        for i, item in enumerate(feed):
-            target_col = feed_col1 if i % 2 == 0 else feed_col2
-            with target_col:
-                with st.container(border=True):
-                    st.markdown(f"**{item['title']}**")
-                    st.caption(f"📂 카테고리: {item['category']}")
-                    
-                    # 핵심 수정 사항: on_click 파라미터와 안정적인 key 값 사용
-                    st.button(
-                        "클릭하여 보기", 
-                        key=f"feed_btn_{i}", 
-                        on_click=click_content, 
-                        args=(item,), 
-                        use_container_width=True
-                    )
+    /* 버튼 */
+    .stButton > button {{
+        border-radius: 14px;
+        font-weight: 700; font-size: 14px;
+        border: 1.5px solid {PASTEL["border"]};
+        background: {PASTEL["card"]};
+        color: {PASTEL["text"]};
+        padding: 12px 20px;
+        transition: all 0.2s ease;
+    }}
+    .stButton > button:hover {{
+        background: #FAF5FF;
+        border-color: {PASTEL["lavender"]};
+        color: {PASTEL["text"]};
+    }}
+    .stButton > button[kind="primary"] {{
+        background: {PASTEL["lavender"]};
+        color: white;
+        border: none;
+    }}
+    .stButton > button[kind="primary"]:hover {{
+        background: #B0A0F5;
+        color: white;
+    }}
 
-# --- 우측: 실시간 분석 대시보드 ---
-with right_col:
-    st.subheader("🤖 실시간 AI 분석")
-    total_clicks = len(st.session_state.click_history)
-    bubble_level = get_bubble_level()
+    /* 탭 스타일 */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 4px;
+        background: transparent;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        background: {PASTEL["card"]};
+        border-radius: 12px 12px 0 0;
+        padding: 10px 18px;
+        font-weight: 600;
+        color: {PASTEL["text_soft"]};
+    }}
+    .stTabs [aria-selected="true"] {{
+        background: {PASTEL["lavender"]} !important;
+        color: white !important;
+    }}
+</style>
+""", unsafe_allow_html=True)
 
-    if bubble_level == 1:
-        st.success("🟢 **1단계: 균형 상태**\n\n다양한 정보가 고르게 추천되고 있습니다.")
-    elif bubble_level == 2:
-        st.warning("🟡 **2단계: 버블 형성 시작**\n\n특정 분야의 추천 비율이 슬슬 늘어나고 있습니다.")
-    elif bubble_level == 3:
-        st.error("🟠 **3단계: 버블 심화 (주의!)**\n\n자극적인 기사가 늘고, 다른 분야의 정보가 사라지고 있습니다.")
-    else:
-        st.error("🔴 **4단계: 필터 버블 고착화 (확증 편향)**\n\n완전히 갇혔습니다! 내가 좋아하는 정보만 보입니다.")
+# =========================================================
+# 헤로
+# =========================================================
+st.markdown("""
+<div class="main-hero">
+  <span class="badge">DIGITAL LITERACY · AI ETHICS</span>
+  <h1>🫧 알고리즘이 만든<br>나만의 작은 세상</h1>
+  <p>매일 보는 유튜브 추천, SNS 피드, 뉴스 화면···<br>
+  우리는 어쩌면 알고리즘이 만든 '거품' 속에 살고 있을지도 몰라요.<br>
+  필터 버블이 무엇이고 왜 중요한지, 함께 이해해 봅시다.</p>
+</div>
+""", unsafe_allow_html=True)
 
-    ptype, desc = analyze_personality()
-    with st.expander("📋 나의 디지털 성향 분석 결과", expanded=True):
-        st.markdown(f"### {ptype}")
-        st.write(desc)
-        
-        if total_clicks >= 5:
-            dominant = max(st.session_state.weights, key=st.session_state.weights.get)
-            st.warning(f"🚨 경고: 정보 환경이 **{dominant}** 위주로 좁아지고 있습니다.")
+# =========================================================
+# 1) 필터 버블이란?
+# =========================================================
+st.markdown('<div class="section-title">📖 필터 버블이란 무엇일까요?</div>', unsafe_allow_html=True)
 
-    st.markdown(f"**📊 카테고리별 AI 추천 가중치 (총 클릭: {total_clicks}회)**")
-    df = pd.DataFrame({
-        "카테고리": list(st.session_state.weights.keys()),
-        "추천 강도": list(st.session_state.weights.values())
-    })
-    st.bar_chart(df.set_index("카테고리"), height=250)
+st.markdown(f"""
+<div class="definition-card">
+  <div class="term">FILTER BUBBLE</div>
+  <div class="term-ko">필터 버블 (Filter Bubble)</div>
+  <div class="term-def">
+    인터넷 사용자의 검색 기록·클릭·시청 패턴을 학습한 알고리즘이,
+    <b>사용자가 좋아할 만한 정보만 선별해 보여주는 현상</b>이에요.
+    그 결과 우리는 자신도 모르는 사이에 <b>한쪽 시각의 정보만 보게 되는 투명한 거품</b> 속에 갇히게 됩니다.
+  </div>
+  <div class="term-source">— 엘리 프레이저(Eli Pariser), 『The Filter Bubble』(2011)</div>
+</div>
+""", unsafe_allow_html=True)
 
-# -----------------------
-# 하단: 버블 해제(탈출) 및 새로운 관심사 검색
-# -----------------------
-st.divider()
-st.subheader("🛡️ 필터 버블 해제하기: 능동적 탐색")
-st.markdown("수동적으로 AI가 주는 정보만 받지 말고, **내가 직접 새로운 분야를 검색**하면 갇혀있던 버블을 깰 수 있습니다.")
+# 인용구
+st.markdown("""
+<div class="quote-box">
+  <div class="quote-mark">"</div>
+  <div class="quote-text">알고리즘은 우리에게 보여주고 싶은 것을 보여줍니다.<br>
+  하지만 우리가 봐야 할 것을 보여주지는 않습니다.</div>
+  <div class="quote-author">— Eli Pariser, TED 2011</div>
+</div>
+""", unsafe_allow_html=True)
 
-search_col1, search_col2 = st.columns(2)
+# =========================================================
+# 2) 왜 만들어질까?
+# =========================================================
+st.markdown('<div class="section-title">⚙️ 필터 버블은 어떻게 만들어질까요?</div>', unsafe_allow_html=True)
+st.markdown(f"""
+<p style="font-size:14px; color:{PASTEL['text_soft']}; margin-bottom:18px;">
+알고리즘이 우리를 거품 속에 가두는 과정은 4단계로 일어납니다.
+</p>
+""", unsafe_allow_html=True)
 
-with search_col1:
-    # 세션 상태에 저장되도록 key 지정
-    st.text_input("🔍 1. 새로운 관심사 직접 검색", placeholder="예: 우주 과학, 환경 보호, 인공지능 등", key="new_keyword")
+steps = [
+    ("데이터 수집", "내가 클릭한 영상, 검색한 단어, 머문 시간, 좋아요 누른 게시물까지 — 거의 모든 행동이 데이터로 기록됩니다."),
+    ("취향 분석", "AI는 이 데이터를 분석해 '이 사람은 어떤 분야를 좋아하는지'에 대한 프로필을 만듭니다."),
+    ("맞춤 추천", "분석된 취향에 맞는 콘텐츠를 우선적으로 화면에 띄워줍니다. 클릭률이 높아지고 체류 시간이 늘어납니다."),
+    ("버블 강화", "맞춤 콘텐츠를 더 많이 클릭할수록 AI는 더 확신을 갖고, 추천 폭은 점점 좁아지며 결국 다른 시각은 사라집니다.")
+]
 
-with search_col2:
-    # 세션 상태에 저장되도록 key 지정
-    st.selectbox("📌 2. 또는 추천 키워드 선택", ["선택안함", "환경/기후변화", "우주 탐사", "세계 역사", "클래식 음악", "미술/전시", "경제/재테크", "심리학"], key="new_select")
+for i, (title, desc) in enumerate(steps, 1):
+    st.markdown(f"""
+    <div class="step-card">
+      <span class="step-num">{i}</span>
+      <span class="step-title">{title}</span>
+      <div class="step-desc">{desc}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-# 콜백 함수 방식 적용
-st.button("🚀 이 키워드로 알고리즘 버블 깨기!", type="primary", on_click=break_bubble, use_container_width=True)
+# =========================================================
+# 3) 왜 위험할까?
+# =========================================================
+st.markdown('<div class="section-title">⚠️ 필터 버블이 왜 위험할까요?</div>', unsafe_allow_html=True)
 
-st.write("") 
+dangers = [
+    ("🎭", "확증 편향 강화", "내 생각과 비슷한 정보만 보다 보면, 내 의견이 절대 옳다고 믿게 됩니다."),
+    ("🌫️", "정보 사각지대", "중요한 사회·정치·과학 이슈가 내 눈에는 보이지 않게 가려질 수 있어요."),
+    ("🔥", "극단화 가속", "자극적이고 분노를 유발하는 콘텐츠가 더 많이 노출되어 사고가 극단으로 흐릅니다."),
+    ("🧩", "사회 분열", "사람마다 다른 정보를 보게 되어, 공동의 대화와 토론이 어려워집니다."),
+    ("🤖", "자율성 상실", "알고리즘이 정해주는 대로 보게 되어, 스스로 정보를 탐색하는 능력이 약해져요."),
+    ("💸", "상업적 이용", "내 취향 데이터가 광고와 마케팅에 활용되어, 소비 결정도 조작될 수 있습니다.")
+]
 
-bottom_col1, bottom_col2 = st.columns([3, 1])
-with bottom_col1:
-    st.markdown("#### 🎓 수업 핵심 키워드")
-    st.info("✅ **필터 버블 (Filter Bubble)** | ✅ **확증 편향 (Confirmation Bias)** | ✅ **추천 알고리즘 윤리** | ✅ **디지털 능동성**")
+dcol1, dcol2, dcol3 = st.columns(3, gap="medium")
+for i, (icon, title, desc) in enumerate(dangers):
+    target = [dcol1, dcol2, dcol3][i % 3]
+    with target:
+        st.markdown(f"""
+        <div class="danger-card" style="margin-bottom:14px;">
+          <div class="danger-icon">{icon}</div>
+          <div class="danger-title">{title}</div>
+          <div class="danger-desc">{desc}</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-with bottom_col2:
-    st.write("") 
-    # 콜백 함수 방식 적용
-    st.button("🔄 전체 초기화 (처음부터 다시)", on_click=reset_all, use_container_width=True)
+# =========================================================
+# 4) 실제 사례 (탭)
+# =========================================================
+st.markdown('<div class="section-title">🌍 우리 주변의 실제 사례</div>', unsafe_allow_html=True)
+
+tab1, tab2, tab3, tab4 = st.tabs(["📺 YouTube", "📱 SNS", "🛒 쇼핑", "📰 뉴스"])
+
+with tab1:
+    st.markdown(f"""
+    <div class="case-card">
+      <span class="case-platform" style="background:#FEE2E2; color:#9F1239;">YOUTUBE</span>
+      <div class="case-text">
+        축구 영상 하나를 클릭하면 다음 추천이 모두 축구로 채워집니다.
+        해외 연구에 따르면 유튜브 추천 알고리즘은 사용자를
+        <b>점점 더 자극적·극단적인 콘텐츠로 유도</b>하는 경향이 있다고 보고됐어요(Mozilla, 2021).
+        '토끼 굴(Rabbit Hole) 효과'라고도 불립니다.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab2:
+    st.markdown(f"""
+    <div class="case-card">
+      <span class="case-platform" style="background:#FCE7F3; color:#9D174D;">INSTAGRAM · TIKTOK</span>
+      <div class="case-text">
+        SNS 피드는 내가 오래 보거나 좋아요를 누른 게시물의 비중을 폭발적으로 늘립니다.
+        그 결과 <b>같은 또래·같은 성향의 게시물만 보이는 '에코 챔버(메아리 방)'</b>가 만들어져,
+        다양한 가치관에 대한 노출이 급격히 줄어듭니다.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab3:
+    st.markdown(f"""
+    <div class="case-card">
+      <span class="case-platform" style="background:#E0E7FF; color:#4338CA;">AMAZON · COUPANG</span>
+      <div class="case-text">
+        쇼핑몰은 내 검색·구매 기록을 바탕으로 추천 상품을 띄웁니다.
+        편리해 보이지만, <b>다른 브랜드·다른 가격대의 상품을 비교할 기회가 줄어들고</b>
+        결국 알고리즘이 정해준 좁은 선택지 안에서만 구매하게 됩니다.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with tab4:
+    st.markdown(f"""
+    <div class="case-card">
+      <span class="case-platform" style="background:#D1FAE5; color:#065F46;">NEWS PORTAL</span>
+      <div class="case-text">
+        포털 뉴스는 내가 자주 클릭한 분야·논조의 기사를 상단에 배치합니다.
+        진보 성향 기사를 자주 읽는 사람과 보수 성향 기사를 자주 읽는 사람은
+        <b>같은 사건에 대해 완전히 다른 뉴스 화면</b>을 보게 됩니다. 같은 나라에 살아도 다른 세상을 보는 셈이죠.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# =========================================================
+# 5) 관련 개념
+# =========================================================
+st.markdown('<div class="section-title">🔗 함께 알면 좋은 개념들</div>', unsafe_allow_html=True)
+
+rcol1, rcol2 = st.columns(2, gap="medium")
+with rcol1:
+    st.markdown(f"""
+    <div class="related-card">
+      <div class="rel-title">🎯 확증 편향 (Confirmation Bias)</div>
+      <div class="rel-desc">
+        자신의 신념과 일치하는 정보만 받아들이고, 반대 정보는 무시하는 인지 경향.
+        필터 버블이 이를 더욱 강화시켜요.
+      </div>
+    </div>
+    <div class="related-card">
+      <div class="rel-title">🔊 에코 챔버 (Echo Chamber)</div>
+      <div class="rel-desc">
+        같은 의견을 가진 사람들끼리만 소통하며 그 의견이 점점 더 강해지는 '메아리 방' 현상.
+        SNS에서 가장 흔히 나타납니다.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with rcol2:
+    st.markdown(f"""
+    <div class="related-card">
+      <div class="rel-title">📚 디지털 리터러시 (Digital Literacy)</div>
+      <div class="rel-desc">
+        디지털 정보를 비판적으로 분석하고, 출처를 검증하며, 책임감 있게 활용하는 능력.
+        필터 버블 시대의 핵심 역량이에요.
+      </div>
+    </div>
+    <div class="related-card">
+      <div class="rel-title">⚖️ 알고리즘 윤리 (Algorithmic Ethics)</div>
+      <div class="rel-desc">
+        AI와 추천 시스템이 사회에 미치는 영향을 윤리적으로 고민하고,
+        공정하고 투명한 알고리즘을 설계하려는 노력입니다.
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# =========================================================
+# 6) 탈출 체크리스트
+# =========================================================
+st.markdown('<div class="section-title">🛡️ 필터 버블 탈출 체크리스트</div>', unsafe_allow_html=True)
+st.markdown(f"""
+<p style="font-size:14px; color:{PASTEL['text_soft']}; margin-bottom:14px;">
+일상에서 실천할 수 있는 작은 습관들이에요. 평소에 몇 가지나 하고 있는지 확인해 보세요.
+</p>
+""", unsafe_allow_html=True)
+
+checks = [
+    "주기적으로 검색 기록과 쿠키를 삭제한다",
+    "시크릿(인코그니토) 모드로 정보를 검색해 본다",
+    "내 의견과 다른 매체·관점의 콘텐츠도 의도적으로 찾아본다",
+    "한 플랫폼만 쓰지 않고 여러 정보원을 비교한다",
+    "기사·영상의 출처와 작성 의도를 한 번 더 확인한다",
+    "추천된 콘텐츠를 클릭하기 전, '이게 정말 내가 원한 정보인가?' 잠시 생각한다"
+]
+
+ccol1, ccol2 = st.columns(2, gap="medium")
+for i, c in enumerate(checks):
+    target = ccol1 if i % 2 == 0 else ccol2
+    with target:
+        st.markdown(f"""
+        <div class="check-item">
+          <span class="check-mark">✓</span>{c}
+        </div>
+        """, unsafe_allow_html=True)
+
+# =========================================================
+# 7) 수업 흐름 안내
+# =========================================================
+st.markdown('<div class="section-title">🚀 이제 직접 체험해 봐요</div>', unsafe_allow_html=True)
+st.markdown(f"""
+<p style="font-size:14px; color:{PASTEL['text_soft']}; margin-bottom:18px;">
+개념을 이해했다면, 이제 알고리즘이 어떻게 나만의 거품을 만드는지 직접 체험해 볼 시간이에요.<br>
+아래 3단계를 순서대로 진행해 보세요.
+</p>
+""", unsafe_allow_html=True)
+
+f1, f2, f3 = st.columns(3, gap="medium")
+with f1:
+    st.markdown("""
+    <div class="flow-card step1">
+      <div class="flow-num">STEP 01</div>
+      <div class="flow-emoji">🫧</div>
+      <div class="flow-title">버블 체험하기</div>
+      <div class="flow-desc">
+        마음에 드는 기사를 클릭하면서<br>
+        나만의 필터 버블이<br>
+        만들어지는 과정을 관찰해요
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with f2:
+    st.markdown("""
+    <div class="flow-card step2">
+      <div class="flow-num">STEP 02</div>
+      <div class="flow-emoji">🧠</div>
+      <div class="flow-title">AI 윤리 퀴즈</div>
+      <div class="flow-desc">
+        체험 데이터를 바탕으로<br>
+        맞춤형 퀴즈를 풀며<br>
+        개념을 점검해요
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+with f3:
+    st.markdown("""
+    <div class="flow-card step3">
+      <div class="flow-num">STEP 03</div>
+      <div class="flow-emoji">🗺️</div>
+      <div class="flow-title">나의 버블 지도</div>
+      <div class="flow-desc">
+        네트워크 그래프로<br>
+        내 정보 소비 패턴을<br>
+        한눈에 확인해요
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.write("")
+
+# 이동 버튼
+b1, b2, b3 = st.columns(3, gap="medium")
+with b1:
+    if st.button("🫧 1단계 · 버블 체험 시작하기", type="primary", use_container_width=True):
+        st.switch_page("pages/01_bubble_test.py")
+with b2:
+    if st.button("🧠 2단계 · 퀴즈로 이동", use_container_width=True):
+        st.switch_page("pages/02_quiz.py")
+with b3:
+    if st.button("🗺️ 3단계 · 지도로 이동", use_container_width=True):
+        st.switch_page("pages/03_map.py")
+
+# =========================================================
+# 푸터
+# =========================================================
+st.write("")
+st.markdown(f"""
+<div style="text-align:center; padding: 30px 0 20px 0;
+            color:{PASTEL['text_soft']}; font-size:12px; line-height:1.8;
+            border-top: 1px solid {PASTEL['border']}; margin-top: 30px;">
+  <b style="color:{PASTEL['text']};">🎓 디지털 리터러시 학습 프로그램</b><br>
+  필터 버블 · 확증 편향 · 추천 알고리즘 윤리 · AI 사회적 영향<br>
+  <span style="font-size:11px;">알고리즘을 이해하는 시민만이 알고리즘에 휘둘리지 않습니다.</span>
+</div>
+""", unsafe_allow_html=True)
